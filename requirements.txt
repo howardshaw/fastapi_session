@@ -1,0 +1,14 @@
+fastapi>=0.115.6
+uvicorn>=0.32.1
+dependency-injector>=4.43.0
+sqlalchemy>=2.0.36
+pytest>=6.2.5
+black>=21.7b0
+flake8>=3.9.2
+mypy>=0.910
+isort>=5.9.3
+pytest-asyncio>=0.15.1
+httpx>=0.18.2
+aiosqlite>=0.20.0
+pydantic>=2.10.3
+six>=1.16.0
