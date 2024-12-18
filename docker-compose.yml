@@ -1,3 +1,7 @@
+include:
+  - path: ./docker-compose-base.yml
+    env_file: ./.env
+
 services:
   server:
     build: .
@@ -6,5 +10,24 @@ services:
     volumes:
       - .:/app
     environment:
-      - DATABASE_URL=sqlite:///./app.db
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload 
+      - DATABASE_URL=mysql+aiomysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}?charset=utf8mb4
+      - TEMPORAL_HOST=temporal:7233
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - temporal-network
+    depends_on:
+      - temporal
+
+  worker:
+    build: .
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=mysql+aiomysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}?charset=utf8mb4
+      - TEMPORAL_HOST=temporal:7233
+    command: python -m app.worker
+    networks:
+      - temporal-network
+    depends_on:
+      - temporal
+      - server

@@ -2,24 +2,19 @@ from dependency_injector.wiring import inject, Provide
 from fastapi import APIRouter, Depends
 
 from app.containers import Container
-from app.repositories import RepositoryA, RepositoryB
-from app.unit_of_work import UnitOfWork
+from app.schemas.transaction import TransactionRequest, TransactionResponse
+from app.services import OrderService
 
 router = APIRouter()
 
 
-@router.post("/")
+@router.post("/", response_model=TransactionResponse)
 @inject
 async def create_transaction(
-        user_name: str,
-        order_description: str,
-        uow: UnitOfWork = Depends(Provide[Container.unit_of_work]),
-        repo_a: RepositoryA = Depends(Provide[Container.repository_a]),
-        repo_b: RepositoryB = Depends(Provide[Container.repository_b]),
+        request: TransactionRequest,
+        order_service: OrderService = Depends(Provide[Container.order_service]),
 ):
-    async with uow.transaction():
-        user = await repo_a.create_user(user_name)
-        print(f"user {user.id} {user.name}")
-        order = await repo_b.create_order(user_id=user.id, description=order_description)
-        print(f"order: {order.id} {order.user_id} {order.description}")
-        return {"message": "Transaction successful", "user_id": user.id}
+    result = await order_service.transaction(request.user_name, request.order_description, request.amount)
+    return TransactionResponse(
+        result=result,
+    )
