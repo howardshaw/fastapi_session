@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Dict, Any
 
 from passlib.context import CryptContext
@@ -153,6 +154,7 @@ class OrderService:
         async with self.uow.transaction():
             user = await self.user_repository.create_user(user_name)
             logger.info(f"user {user.id} {user.username}")
+            time.sleep(10)
             order = await self.order_repository.create_order(user_id=user.id, description=order_description,
                                                              amount=amount)
             logger.info(f"order: {order.id} {order.user_id} {order.description}")

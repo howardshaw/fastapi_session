@@ -29,12 +29,13 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = ["*"]
 
     TEMPORAL_HOST: str = "localhost:7233"
-    REDIS_HOST: str = "localhost"
+    REDIS_URL: str = "redis://localhost:6379"
     OPENAI_API_KEY: str = ""
     OPENAI_BASE_URL: str = "https://api.openai-hk.com/v1"
     OPENAI_MODEL: str = ""
 
-    TEMPORAL_TASK_QUEUE: str = "transfer-task-queue"
+    TEMPORAL_TRANSFER_QUEUE: str = "transfer-task-queue"
+    TEMPORAL_TRANSLATE_QUEUE: str = "translate-task-queue"
 
     DATABASE_URL: str = "sqlite+aiosqlite:///./test.db"
 

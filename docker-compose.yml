@@ -4,6 +4,7 @@ include:
 
 services:
   server:
+    container_name: server
     build: .
     ports:
       - "8000:8000"
@@ -12,20 +13,42 @@ services:
     environment:
       - DATABASE_URL=mysql+aiomysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}?charset=utf8mb4
       - TEMPORAL_HOST=temporal:7233
+      - REDIS_URL=redis://temporal-redis:6379
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     networks:
       - temporal-network
     depends_on:
       - temporal
 
-  worker:
+  transfer-worker:
+    container_name: transfer-worker
     build: .
     volumes:
       - .:/app
     environment:
       - DATABASE_URL=mysql+aiomysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}?charset=utf8mb4
       - TEMPORAL_HOST=temporal:7233
-    command: python -m app.worker
+      - REDIS_URL=redis://temporal-redis:6379
+    command: python -m app.workflows.transfer.worker
+    networks:
+      - temporal-network
+    depends_on:
+      - temporal
+      - server
+
+  translate-worker:
+    container_name: translate-worker
+    build: .
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=mysql+aiomysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}?charset=utf8mb4
+      - TEMPORAL_HOST=temporal:7233
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL}
+      - OPENAI_MODEL=${OPENAI_MODEL}
+      - REDIS_URL=redis://temporal-redis:6379
+    command: python -m app.workflows.translate.worker
     networks:
       - temporal-network
     depends_on:

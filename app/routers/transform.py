@@ -1,4 +1,3 @@
-import logging
 import uuid
 
 from dependency_injector.wiring import inject, Provide
@@ -7,12 +6,10 @@ from temporalio.client import Client
 from temporalio.exceptions import TemporalError
 
 from app.containers import Container
+from app.logger import logger
 from app.schemas.transfer import TransferRequest, TransferResponse
 from app.settings import Settings
-from app.workflows import TransferWorkflow
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from app.workflows.transfer.workflows import TransferWorkflow
 
 router = APIRouter()
 
@@ -33,7 +30,7 @@ async def transfer(
             TransferWorkflow.run,
             args=[transfer_request.from_account, transfer_request.to_account, transfer_request.amount],
             id=workflow_id,
-            task_queue=settings.TEMPORAL_TASK_QUEUE,
+            task_queue=settings.TEMPORAL_TRANSFER_QUEUE,
         )
 
         logger.info(f"Transfer initiated: {handle}")

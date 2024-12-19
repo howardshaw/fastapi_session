@@ -5,53 +5,68 @@ from temporalio.common import RetryPolicy
 from temporalio.exceptions import ApplicationError, ActivityError
 
 with workflow.unsafe.imports_passed_through():
-    from app.activities import AccountActivities
-
+    from app.workflows.transfer.activities import AccountActivities
 
 @workflow.defn
 class TransferWorkflow:
+    """
+    Transfer workflow implementation
+    """
     @workflow.run
     async def run(self, from_account_id: int, to_account_id: int, amount: float) -> dict:
         """
-        执行账户转账的逻辑
+        Execute transfer between accounts
+        
+        Args:
+            from_account_id: Source account ID
+            to_account_id: Target account ID
+            amount: Amount to transfer
+            
+        Returns:
+            dict: Transfer result with status and details
         """
+        retry_policy = RetryPolicy(
+            initial_interval=timedelta(seconds=1),
+            maximum_interval=timedelta(seconds=10),
+            maximum_attempts=5,
+            non_retryable_error_types=["BusinessError"]
+        )
+
         try:
+            # Execute transfer activity
             await workflow.execute_activity(
                 AccountActivities.transform_activity,
                 args=[from_account_id, to_account_id, amount],
                 start_to_close_timeout=timedelta(seconds=10),
-                retry_policy=RetryPolicy(
-                    maximum_attempts=5,  # 最多重试5次
-                    non_retryable_error_types=[
-                        "BusinessError"  # 业务错误不重试
-                    ]
-                )
+                retry_policy=retry_policy,
             )
+
+            workflow.logger.info(
+                f"Transfer completed: {amount} from {from_account_id} to {to_account_id}"
+            )
+
             return {
                 "status": "completed",
                 "from_account": from_account_id,
                 "to_account": to_account_id,
                 "amount": amount
             }
+
         except ActivityError as e:
-            workflow.logger.error(f"TransferWorkflow failed: {e} {e.cause}")
-            
-            # 从 ActivityError 中提取业务错误信息
+            workflow.logger.error(f"Activity error in transfer: {e}")
+
             if isinstance(e.cause, ApplicationError) and e.cause.details:
                 error_details = e.cause.details
-                workflow.logger.error(f"TransferWorkflow error details: {error_details}")
-                
-                # error_details[0] 是包含 [error_type, error_message] 的列表
-                error_info = error_details[0]
-                error_type, error_message = error_info
-                
+                workflow.logger.error(f"Error details: {error_details}")
+
+                # if isinstance(error_details, list) and len(error_details) > 0:
+                error_type, error_message = error_details[0]
                 return {
                     "status": "failed",
-                    "error": error_type.lower().replace("error", ""),  # 转换错误类型为更友好的格式
+                    "error": error_type.lower().replace("error", ""),
                     "message": error_message
                 }
-            
-            # 如果无法获取详细信息，返回通用错误
+
             return {
                 "status": "failed",
                 "error": "activity_error",
@@ -59,7 +74,7 @@ class TransferWorkflow:
             }
 
         except Exception as e:
-            workflow.logger.error(f"Unexpected error: {type(e)} {e}")
+            workflow.logger.error(f"Unexpected error in transfer: {e}")
             return {
                 "status": "failed",
                 "error": "unexpected_error",

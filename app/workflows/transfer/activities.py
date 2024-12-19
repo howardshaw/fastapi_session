@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from temporalio import activity
 from temporalio.exceptions import ApplicationError
 
-from app.exceptions import InsufficientFundsError, AccountNotFoundError,AccountLockedError
+from app.exceptions import InsufficientFundsError, AccountNotFoundError, AccountLockedError
 from app.services import TransactionService
 
 
@@ -22,33 +22,30 @@ class ActivityError:
 
 
 class AccountActivities:
+    """Account-related activities implementation"""
+
     def __init__(self, transaction_service: TransactionService):
-        self.account_service = transaction_service
+        self._transaction_service = transaction_service
 
     @activity.defn
-    async def withdraw_activity(
-            self,
-            account_id: int,
-            amount: float
-    ):
+    async def withdraw_activity(self, account_id: int, amount: float) -> None:
+        """Withdraw money from an account"""
         try:
-            await self.account_service.withdraw(account_id, amount)
+            await self._transaction_service.withdraw(account_id, amount)
         except (InsufficientFundsError, AccountNotFoundError) as e:
-            # 将业务异常转换为可序列化的格式
+            activity.logger.error(f"Withdraw failed: {e}")
             raise ApplicationError(
                 "BusinessError",
                 ActivityError.from_exception(e)
             )
 
     @activity.defn
-    async def deposit_activity(
-            self,
-            account_id: int,
-            amount: float
-    ):
+    async def deposit_activity(self, account_id: int, amount: float) -> None:
+        """Deposit money to an account"""
         try:
-            await self.account_service.deposit(account_id, amount)
+            await self._transaction_service.deposit(account_id, amount)
         except AccountNotFoundError as e:
+            activity.logger.error(f"Deposit failed: {e}")
             raise ApplicationError(
                 "BusinessError",
                 ActivityError.from_exception(e)
@@ -60,18 +57,21 @@ class AccountActivities:
             from_account_id: int,
             to_account_id: int,
             amount: float
-    ):
+    ) -> None:
+        """Transfer money between accounts"""
         try:
-            await self.account_service.transfer(from_account_id, to_account_id, amount)
+            await self._transaction_service.transfer(
+                from_account_id,
+                to_account_id,
+                amount
+            )
         except (InsufficientFundsError, AccountNotFoundError) as e:
-            activity.logger.error(f"Business error in transform_activity: {type(e)} {e}")
-
+            activity.logger.error(f"Transfer failed: {e}")
             raise ApplicationError(
                 "BusinessError",
                 ActivityError.from_exception(e),
                 non_retryable=True,
             )
         except AccountLockedError as e:
-            activity.logger.error(f"Account locked error: {type(e)} {e}")
-            raise e
-
+            activity.logger.error(f"Account locked: {e}")
+            raise
