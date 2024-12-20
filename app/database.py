@@ -34,7 +34,9 @@ def set_session_context(session_id: str) -> Token:
 def reset_session_context(context: Token) -> None:
     session_context.reset(context)
 
+
 AsyncCallable = Callable[..., Awaitable]
+
 
 class Database:
     def __init__(self, db_url: str) -> None:
@@ -81,19 +83,19 @@ class Database:
         Automatically handles commit/rollback.
         """
         session: AsyncSession = self._session_factory()
-        logger.info(f"Created transaction session: {id(session)}")
+        logger.debug(f"Created transaction session: {id(session)}")
 
         try:
             # 开始事务
             if not session.in_transaction():
                 await session.begin()
-            logger.info(f"Started transaction: {id(session)}")
+            logger.debug(f"Started transaction: {id(session)}")
 
             try:
                 yield session
                 # 如果没有异常，提交事务
                 await session.commit()
-                logger.info(f"Committed transaction: {id(session)}")
+                logger.debug(f"Committed transaction: {id(session)}")
             except Exception as e:
                 # 如果有异常，回滚事务
                 await session.rollback()
@@ -102,7 +104,7 @@ class Database:
         finally:
             # 确保session总是被关闭
             await session.close()
-            logger.info(f"Closed transaction session: {id(session)}")
+            logger.debug(f"Closed transaction session: {id(session)}")
 
     async def init_db(self) -> None:
         """Initialize database tables."""
@@ -115,10 +117,12 @@ class Database:
         装饰器：为函数提供事务上下文
         自动处理事务的开始、提交和回滚
         """
+
         @functools.wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
             async with self.transaction() as session:
                 # 将 session 注入到 kwargs 中
                 kwargs['session'] = session
                 return await func(*args, **kwargs)
+
         return wrapper

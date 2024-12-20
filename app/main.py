@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         # Container 会自动管理资源的清理
-        await container.shutdown_resources()
+        container.shutdown_resources()
         logger.info("Resources cleaned up")
 
 

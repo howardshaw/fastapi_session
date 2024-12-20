@@ -1,35 +1,19 @@
-from contextlib import asynccontextmanager
 import logging
-from typing import AsyncGenerator, Callable
 
 from dependency_injector import containers, providers
 from langchain_openai import ChatOpenAI
 from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clients import TemporalClientFactory
 from app.database import Database
 from app.repositories import UserRepository, OrderRepository
 from app.services import UserService, TransactionService, OrderService
 from app.settings import get_settings
-from app.unit_of_work import UnitOfWork
 from app.workflows.transfer.activities import AccountActivities
 from app.workflows.translate.activities import TranslateActivities
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-
-@asynccontextmanager
-async def get_session(db: Database) -> AsyncGenerator[AsyncSession, None]:
-    """Provide a transactional scope around a series of operations."""
-    async with db.session() as session:
-        logger.info(f"Created new session: {id(session)}")
-        try:
-            yield session
-        finally:
-            logger.info(f"Closing session: {id(session)}")
-
 
 
 class Container(containers.DeclarativeContainer):
@@ -76,15 +60,9 @@ class Container(containers.DeclarativeContainer):
     )
 
     # Session provider
-    session = providers.Resource(
-        db.provided._session_factory,
-    )
-
-    # Unit of Work - gets new session for each request
-    unit_of_work = providers.Factory(
-        UnitOfWork,
-        session=session,
-    )
+    # session = providers.Resource(
+    #     db.provided._session_factory,
+    # )
 
     # Repositories - get new session for each request
     user_repository = providers.Factory(
@@ -100,8 +78,8 @@ class Container(containers.DeclarativeContainer):
     # Services - get new session for each request
     user_service = providers.Factory(
         UserService,
-        session=session,
-        uow=unit_of_work
+        db=db.provided,
+        user_repository=user_repository,
     )
 
     order_service = providers.Factory(
@@ -113,8 +91,7 @@ class Container(containers.DeclarativeContainer):
 
     transaction_service = providers.Factory(
         TransactionService,
-        session=session,
-        uow=unit_of_work
+        db=db.provided,
     )
 
     # Activities
