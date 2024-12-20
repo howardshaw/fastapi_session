@@ -1,15 +1,35 @@
+from contextlib import asynccontextmanager
+import logging
+from typing import AsyncGenerator, Callable
+
 from dependency_injector import containers, providers
 from langchain_openai import ChatOpenAI
 from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.pool import AsyncAdaptedQueuePool
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.clients import TemporalClientFactory
+from app.database import Database
 from app.repositories import UserRepository, OrderRepository
 from app.services import UserService, TransactionService, OrderService
 from app.settings import get_settings
 from app.unit_of_work import UnitOfWork
 from app.workflows.transfer.activities import AccountActivities
 from app.workflows.translate.activities import TranslateActivities
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def get_session(db: Database) -> AsyncGenerator[AsyncSession, None]:
+    """Provide a transactional scope around a series of operations."""
+    async with db.session() as session:
+        logger.info(f"Created new session: {id(session)}")
+        try:
+            yield session
+        finally:
+            logger.info(f"Closing session: {id(session)}")
+
 
 
 class Container(containers.DeclarativeContainer):
@@ -49,47 +69,32 @@ class Container(containers.DeclarativeContainer):
         model=settings.provided.OPENAI_MODEL,
     )
 
-    # Database engine with async pool
-    engine = providers.Singleton(
-        create_async_engine,
-        url=settings.provided.DATABASE_URL,
-        echo=True,
-        poolclass=AsyncAdaptedQueuePool,
-        pool_pre_ping=True,
-        pool_size=20,
-        max_overflow=10,
-        pool_timeout=30,
+    # Database
+    db = providers.Singleton(
+        Database,
+        db_url=settings.provided.DATABASE_URL,
     )
 
-    # Session factory
-    session_factory = providers.Singleton(
-        async_sessionmaker,
-        bind=engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
-        autoflush=False,
-    )
-
-    # Session provider - creates new session for each request
-    session = providers.Factory(
-        session_factory.provided,
+    # Session provider
+    session = providers.Resource(
+        db.provided._session_factory,
     )
 
     # Unit of Work - gets new session for each request
     unit_of_work = providers.Factory(
         UnitOfWork,
-        session=session
+        session=session,
     )
 
     # Repositories - get new session for each request
     user_repository = providers.Factory(
         UserRepository,
-        session=session
+        session_or_factory=db.provided.get_session,
     )
 
     order_repository = providers.Factory(
         OrderRepository,
-        session=session
+        session_or_factory=db.provided.get_session,
     )
 
     # Services - get new session for each request
@@ -101,8 +106,7 @@ class Container(containers.DeclarativeContainer):
 
     order_service = providers.Factory(
         OrderService,
-        session=session,
-        uow=unit_of_work,
+        db=db.provided,
         user_repository=user_repository,
         order_repository=order_repository
     )

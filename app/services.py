@@ -7,12 +7,14 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.database import Database,AsyncCallable
 from app.exceptions import AccountNotFoundError, DatabaseError, InsufficientFundsError, AccountLockedError
 from app.models import User, Account
 from app.repositories import UserRepository, OrderRepository
 from app.schemas.user import UserCreate
 from app.unit_of_work import UnitOfWork
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -20,6 +22,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class UserService:
     def __init__(self, session: AsyncSession, uow: UnitOfWork):
+        logger.info(f"Initializing user service.{session}")
         self.session = session
         self.uow = uow
 
@@ -145,17 +148,52 @@ class TransactionService:
 
 
 class OrderService:
-    def __init__(self, uow: UnitOfWork, user_repository: UserRepository, order_repository: OrderRepository):
-        self.uow = uow
+    def __init__(self, db: Database, user_repository: UserRepository, order_repository: OrderRepository):
+        self.db = db
         self.user_repository = user_repository
         self.order_repository = order_repository
 
     async def transaction(self, user_name: str, order_description: str, amount: float) -> Dict[str, Any]:
-        async with self.uow.transaction():
+        """
+        创建用户和订单的事务
+        使用 transactional 装饰器自动处理事务
+        """
+        return await self._create_user_and_order(user_name, order_description, amount)
+
+    @property
+    def _create_user_and_order(self) -> AsyncCallable:
+        """
+        将实际的事务逻辑包装在属性中
+        这样可以在每次调用时获得一个新的装饰后的函数
+        """
+        @self.db.transactional
+        async def create_user_and_order(
+            user_name: str,
+            order_description: str,
+            amount: float,
+            session: AsyncSession,
+        ) -> Dict[str, Any]:
+            logger.info(f"Transaction for {user_name} with description {order_description}")
+            
+            # 使用注入的 session 创建用户
             user = await self.user_repository.create_user(user_name)
-            logger.info(f"user {user.id} {user.username}")
-            time.sleep(10)
-            order = await self.order_repository.create_order(user_id=user.id, description=order_description,
-                                                             amount=amount)
-            logger.info(f"order: {order.id} {order.user_id} {order.description}")
-            return {"message": "Transaction successful", "user_id": user.id, "order_id": order.id, "amount": amount}
+            logger.info(f"Created user: {user.id} {user.username}")
+            
+            # time.sleep(10)
+            
+            # 使用相同的 session 创建订单
+            order = await self.order_repository.create_order(
+                user_id=user.id,
+                description=order_description,
+                amount=amount,
+            )
+            logger.info(f"Created order: {order.id} {order.user_id} {order.description}")
+            
+            return {
+                "message": "Transaction successful",
+                "user_id": user.id,
+                "order_id": order.id,
+                "amount": amount
+            }
+            
+        return create_user_and_order

@@ -32,8 +32,8 @@ async def lifespan(app: FastAPI):
     logger.info("========================")
 
     # 初始化数据库
-    engine = container.engine()
-    await init_db(engine)
+    database = container.db()
+    await database.init_db()
     logger.info("Database initialized")
 
     try:
