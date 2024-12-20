@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from temporalio.client import Client
 from temporalio.exceptions import TemporalError
 
-from app.containers import Container
+from app.core.containers import Container
 from app.logger import logger
 from app.schemas.transfer import TransferRequest, TransferResponse
 from app.settings import Settings

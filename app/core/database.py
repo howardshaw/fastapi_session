@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import AsyncAdaptedQueuePool
 
-from app.metrics import (
+from app.core.metrics import (
     DB_SESSIONS,
     DB_SESSION_DURATION,
     DB_ACTIVE_SESSIONS,

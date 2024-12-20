@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from temporalio import activity
 from temporalio.exceptions import ApplicationError
 
-from app.exceptions import InsufficientFundsError, AccountNotFoundError, AccountLockedError
+from app.core.exceptions import InsufficientFundsError, AccountNotFoundError, AccountLockedError
 from app.services import TransactionService
 
 

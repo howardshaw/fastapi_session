@@ -1,50 +1,16 @@
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
-from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import Database
-from app.exceptions import AccountNotFoundError, DatabaseError, InsufficientFundsError, AccountLockedError
-from app.models import User, Account
-from app.repositories import UserRepository, OrderRepository
-from app.schemas.user import UserCreate
+from app.core.database import Database
+from app.core.exceptions import AccountNotFoundError, DatabaseError, InsufficientFundsError, AccountLockedError
+from app.models import Account
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-class UserService:
-    def __init__(self, db: Database, user_repository: UserRepository):
-        self.db = db
-        self.user_repository = user_repository
-
-    async def create_user(self, user_data: UserCreate) -> User:
-        """
-        创建用户和关联账户
-        使用事务确保原子性
-        """
-        async with self.db.transaction():
-            return await self.user_repository.create_user_with_account(user_data)
-
-    async def get_user_by_email(self, email: str) -> Optional[User]:
-        """
-        通过邮箱查询用户
-        只读操作，使用普通session
-        """
-        return await self.user_repository.get_user_by_email(email)
-
-    async def get_user_by_id(self, user_id: int) -> Optional[User]:
-        """
-        通过ID查询用户
-        只读操作，使用普通session
-        """
-
-        return await self.user_repository.get_user_by_id(user_id)
 
 
 class TransactionService:
@@ -133,38 +99,4 @@ class TransactionService:
                 "to_account": to_account_id,
                 "amount": amount,
                 "status": "success"
-            }
-
-
-class OrderService:
-    def __init__(self, db: Database, user_repository: UserRepository, order_repository: OrderRepository):
-        self.db = db
-        self.user_repository = user_repository
-        self.order_repository = order_repository
-
-    async def transaction(self, user_name: str, order_description: str, amount: float) -> Dict[str, Any]:
-        """
-        创建用户和订单的事务
-        使用事务上下文管理器确保事务的完整性
-        """
-        async with self.db.transaction():
-            logger.info(f"Transaction for {user_name} with description {order_description}")
-
-            # 创建用户
-            user = await self.user_repository.create_user(user_name)
-            logger.info(f"Created user: {user.id} {user.username}")
-
-            # 创建订单
-            order = await self.order_repository.create_order(
-                user_id=user.id,
-                description=order_description,
-                amount=amount,
-            )
-            logger.info(f"Created order: {order.id} {order.user_id} {order.description}")
-
-            return {
-                "message": "Transaction successful",
-                "user_id": user.id,
-                "order_id": order.id,
-                "amount": amount
             }

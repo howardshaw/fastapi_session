@@ -7,7 +7,7 @@ from langchain_core.messages import AIMessageChunk
 from temporalio import activity
 
 from app.logger import logger
-from app.queue_manager import QueueManager
+from app.core.queue_manager import QueueManager
 
 
 @dataclass

@@ -6,7 +6,7 @@ from dependency_injector.wiring import inject, Provide
 from temporalio.client import Client
 from temporalio.worker import Worker
 
-from app.containers import Container
+from app.core.containers import Container
 from app.workflows.transfer.activities import AccountActivities
 from app.workflows.transfer.workflows import TransferWorkflow
 

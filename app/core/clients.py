@@ -1,15 +1,14 @@
 import logging
-from tenacity import retry, stop_after_attempt, wait_exponential
-from temporalio.client import Client
 
-from app.settings import settings
+from temporalio.client import Client
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
 
 class TemporalClientFactory:
     """Factory for creating Temporal Client instances"""
-    
+
     @staticmethod
     @retry(
         stop=stop_after_attempt(5),

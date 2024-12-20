@@ -4,8 +4,8 @@ from dependency_injector import containers, providers
 from langchain_openai import ChatOpenAI
 from redis.asyncio import Redis
 
-from app.clients import TemporalClientFactory
-from app.database import Database
+from app.core.clients import TemporalClientFactory
+from app.core.database import Database
 from app.repositories import UserRepository, OrderRepository
 from app.services import UserService, TransactionService, OrderService
 from app.settings import get_settings

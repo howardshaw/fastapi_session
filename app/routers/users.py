@@ -3,7 +3,7 @@ import logging
 from dependency_injector.wiring import inject, Provide
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.containers import Container
+from app.core.containers import Container
 from app.schemas.user import UserCreate, UserResponse
 from app.services import UserService
 

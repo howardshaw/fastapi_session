@@ -4,8 +4,8 @@ from dependency_injector.wiring import inject, Provide
 from fastapi import APIRouter, Depends
 from sqlalchemy import text
 
-from app.containers import Container
-from app.database import Database
+from app.core.containers import Container
+from app.core.database import Database
 from app.schemas.transaction import TransactionRequest, TransactionResponse
 from app.services import OrderService
 
