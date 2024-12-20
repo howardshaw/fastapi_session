@@ -14,6 +14,12 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import AsyncAdaptedQueuePool
 
+from app.metrics import (
+    DB_SESSIONS,
+    DB_SESSION_DURATION,
+    DB_ACTIVE_SESSIONS,
+    DB_ERRORS
+)
 from app.models import Base
 
 logging.basicConfig(level=logging.INFO)
@@ -60,7 +66,12 @@ class Database:
         )
 
     def get_session(self) -> AsyncSession:
-        return self._session_factory()
+        """Get a new session."""
+        DB_SESSIONS.labels(session_type='direct').inc()
+        DB_ACTIVE_SESSIONS.labels(session_type='direct').inc()
+        session = self._session_factory()
+        logger.debug(f"Created new session: {id(session)}")
+        return session
 
     @asynccontextmanager
     async def session(self) -> AsyncGenerator[AsyncSession, None]:
@@ -68,13 +79,20 @@ class Database:
         Context manager for read-only operations.
         Does not start a transaction, suitable for queries.
         """
+        
         session: AsyncSession = self._session_factory()
-        logger.info(f"Created read session: {id(session)}")
+        logger.debug(f"Created read session: {id(session)}")
+        
         try:
-            yield session
+            with DB_SESSION_DURATION.labels(session_type='read', operation='query').time():
+                yield session
+        except Exception as e:
+            DB_ERRORS.labels(operation='read', error_type=type(e).__name__).inc()
+            raise
         finally:
             await session.close()
-            logger.info(f"Closed read session: {id(session)}")
+            DB_ACTIVE_SESSIONS.labels(session_type='read').dec()
+            logger.debug(f"Closed read session: {id(session)}")
 
     @asynccontextmanager
     async def transaction(self) -> AsyncGenerator[AsyncSession, None]:
@@ -82,28 +100,37 @@ class Database:
         Context manager for transactional operations.
         Automatically handles commit/rollback.
         """
+        DB_SESSIONS.labels(session_type='transaction').inc()
+        DB_ACTIVE_SESSIONS.labels(session_type='transaction').inc()
+        
         session: AsyncSession = self._session_factory()
         logger.debug(f"Created transaction session: {id(session)}")
 
         try:
             # 开始事务
             if not session.in_transaction():
-                await session.begin()
-            logger.debug(f"Started transaction: {id(session)}")
+                with DB_SESSION_DURATION.labels(session_type='transaction', operation='begin').time():
+                    await session.begin()
+                logger.debug(f"Started transaction: {id(session)}")
 
             try:
-                yield session
+                with DB_SESSION_DURATION.labels(session_type='transaction', operation='execute').time():
+                    yield session
                 # 如果没有异常，提交事务
-                await session.commit()
+                with DB_SESSION_DURATION.labels(session_type='transaction', operation='commit').time():
+                    await session.commit()
                 logger.debug(f"Committed transaction: {id(session)}")
             except Exception as e:
                 # 如果有异常，回滚事务
-                await session.rollback()
+                with DB_SESSION_DURATION.labels(session_type='transaction', operation='rollback').time():
+                    await session.rollback()
+                DB_ERRORS.labels(operation='transaction', error_type=type(e).__name__).inc()
                 logger.error(f"Rolled back transaction {id(session)}: {str(e)}")
                 raise
         finally:
             # 确保session总是被关闭
             await session.close()
+            DB_ACTIVE_SESSIONS.labels(session_type='transaction').dec()
             logger.debug(f"Closed transaction session: {id(session)}")
 
     async def init_db(self) -> None:

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Optional, Callable
 
@@ -39,6 +40,8 @@ class UserRepository:
         self.session.add(db_user)
         await self.session.flush()
         await self.session.refresh(db_user)
+
+        await asyncio.sleep(20)
 
         # Create associated account
         db_account = Account(
