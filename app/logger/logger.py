@@ -1,5 +1,6 @@
 import logging
 from logging.handlers import RotatingFileHandler
+from typing import Any
 
 import structlog
 from opentelemetry import trace
@@ -32,7 +33,7 @@ def inject_trace_id(logger: LoggerType, method_name: str, event_dict: dict) -> d
     return event_dict
 
 
-def get_logger(name: str, **kwargs) -> LoggerType:
+def get_logger(name: str, **kwargs) -> Any:
     return structlog.get_logger(name, **kwargs)
 
 

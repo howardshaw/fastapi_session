@@ -19,7 +19,7 @@ from app.core.observability.tracings import (
     shutdown_telemetry,
 )
 from app.logger.logger import get_logger, setup_logging
-from app.routers import users, transactions, translate, transform
+from app.routers import users, transactions, translate, transform, dsl
 from app.settings import settings
 
 setup_logging(settings=settings)
@@ -99,6 +99,7 @@ app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(transactions.router, prefix="/transactions", tags=["transactions"])
 app.include_router(translate.router, prefix="/translate", tags=["translate"])
 app.include_router(transform.router, prefix="/transform", tags=["transform"])
+app.include_router(dsl.router, prefix="/dsl", tags=["dsl"])
 
 init_fastapi_instrumentation(app)
 instrument_threads()

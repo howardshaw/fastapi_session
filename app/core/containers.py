@@ -9,6 +9,7 @@ from app.core.database import Database
 from app.repositories import UserRepository, OrderRepository
 from app.services import UserService, TransactionService, OrderService
 from app.settings import get_settings
+from app.workflows.dsl.activities import DSLActivities
 from app.workflows.transfer.activities import AccountActivities
 from app.workflows.translate.activities import TranslateActivities
 
@@ -25,8 +26,10 @@ class Container(containers.DeclarativeContainer):
             "app.routers.transactions",
             "app.routers.translate",
             "app.routers.transform",
+            "app.routers.dsl",
             "app.workflows.transfer.worker",
             "app.workflows.translate.worker",
+            "app.workflows.dsl.worker",
         ]
     )
 
@@ -100,4 +103,7 @@ class Container(containers.DeclarativeContainer):
         TranslateActivities,
         llm=llm,
         redis_client=redis_client
+    )
+    dsl_activities = providers.Factory(
+        DSLActivities
     )

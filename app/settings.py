@@ -54,6 +54,7 @@ class Settings(BaseSettings):
 
     TEMPORAL_TRANSFER_QUEUE: str = "transfer-task-queue"
     TEMPORAL_TRANSLATE_QUEUE: str = "translate-task-queue"
+    TEMPORAL_DSL_QUEUE: str = "dsl-task-queue"
 
     DATABASE_URL: str = "sqlite+aiosqlite:///./test.db"
 
