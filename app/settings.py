@@ -26,9 +26,27 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     LOG_LEVEL: str = "INFO"
+    LOG_FORMAT: str = "JSON"
+    LOG_COLORS: bool = True
+    METRICS_CONSOLE: bool = False
+    INCLUDE_TRACE_ID: bool = True
+    SHOW_TRACEBACKS: bool = True
+    TRACEBACK_SHOW_LOCALS: bool = True
+    TRACEBACK_MAX_FRAMES: int = 10
     CORS_ORIGINS: List[str] = ["*"]
+    API_SERVICE_NAME: str = "api-server"
+    ENVIRONMENT: str = "development"
+    COMPRESSION: str = "gzip"
 
     TEMPORAL_HOST: str = "localhost:7233"
+    OTLP_ENDPOINT: str = "http://localhost:4317"
+    OTLP_INSECURE: bool = True
+    EXPORT_INTERVAL_MILLIS: int = 5000
+    EXPORT_TIMEOUT_MILLIS: int = 10000
+    MAX_QUEUE_SIZE: int = 2048
+    MAX_EXPORT_BATCH_SIZE: int = 512
+    SCHEDULE_DELAY_MILLIS: int = 5000
+
     REDIS_URL: str = "redis://localhost:6379"
     OPENAI_API_KEY: str = ""
     OPENAI_BASE_URL: str = "https://api.openai-hk.com/v1"

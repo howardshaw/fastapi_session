@@ -1,13 +1,12 @@
-import logging
 from typing import Optional
 
 from app.core.database import Database
+from app.logger import get_logger
 from app.models import User
 from app.repositories import UserRepository
 from app.schemas.user import UserCreate
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class UserService:

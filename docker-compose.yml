@@ -1,6 +1,8 @@
 include:
   - path: ./docker-compose-base.yml
     env_file: ./.env
+  - path: ./docker-compose-otlp.yml
+    env_file: ./.env
 
 services:
   server:

@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import sys
 
 from dependency_injector.wiring import inject, Provide
@@ -7,12 +6,12 @@ from temporalio.client import Client
 from temporalio.worker import Worker
 
 from app.core.containers import Container
+from app.logger.logger import get_logger,setup_logging
 from app.settings import Settings
 from app.workflows.translate.activities import TranslateActivities
 from app.workflows.translate.workflows import TranslateWorkflow
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @inject
@@ -42,6 +41,9 @@ async def main():
     try:
         # Initialize DI container
         container = Container()
+        container.wire(modules=[__name__])
+        settings = container.settings()
+        setup_logging(settings)
 
         # Only wire if running as standalone script
         if __name__ == "__main__":

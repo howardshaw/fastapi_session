@@ -1,14 +1,13 @@
-import logging
-
 from dependency_injector.wiring import inject, Provide
 from fastapi import APIRouter, Depends, HTTPException, status
+from opentelemetry import trace
 
 from app.core.containers import Container
+from app.logger.logger import get_logger
 from app.schemas.user import UserCreate, UserResponse
 from app.services import UserService
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter()
 
 
@@ -49,6 +48,8 @@ async def get_current_user(
         user_id: int,
         user_service: UserService = Depends(Provide[Container.user_service])
 ):
+    logger.info(f"get current user {user_id} trace: {trace.get_current_span().get_span_context().trace_id}")
+
     user = await user_service.get_user_by_id(user_id)
     if not user:
         raise HTTPException(

@@ -1,6 +1,5 @@
 import asyncio
 import functools
-import logging
 from contextlib import asynccontextmanager
 from contextvars import ContextVar, Token
 from typing import AsyncGenerator
@@ -20,10 +19,10 @@ from app.core.metrics import (
     DB_ACTIVE_SESSIONS,
     DB_ERRORS
 )
+from app.logger.logger import get_logger
 from app.models import Base
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 current_task = ContextVar("current_task")
 session_context: ContextVar[str] = ContextVar("session_context")
@@ -48,7 +47,7 @@ class Database:
     def __init__(self, db_url: str) -> None:
         self._engine = create_async_engine(
             db_url,
-            echo=True,
+            echo=False,
             poolclass=AsyncAdaptedQueuePool,
             pool_pre_ping=True,
             pool_size=20,
@@ -79,10 +78,10 @@ class Database:
         Context manager for read-only operations.
         Does not start a transaction, suitable for queries.
         """
-        
+
         session: AsyncSession = self._session_factory()
         logger.debug(f"Created read session: {id(session)}")
-        
+
         try:
             with DB_SESSION_DURATION.labels(session_type='read', operation='query').time():
                 yield session
@@ -102,7 +101,7 @@ class Database:
         """
         DB_SESSIONS.labels(session_type='transaction').inc()
         DB_ACTIVE_SESSIONS.labels(session_type='transaction').inc()
-        
+
         session: AsyncSession = self._session_factory()
         logger.debug(f"Created transaction session: {id(session)}")
 

@@ -38,6 +38,7 @@ class Container(containers.DeclarativeContainer):
     temporal_client = providers.Factory(
         TemporalClientFactory.create,
         url=settings.provided.TEMPORAL_HOST,
+        otlp_endpoint=settings.provided.OTLP_ENDPOINT,
     )
 
     redis_client = providers.Factory(
@@ -59,11 +60,6 @@ class Container(containers.DeclarativeContainer):
         db_url=settings.provided.DATABASE_URL,
     )
 
-    # Session provider
-    # session = providers.Resource(
-    #     db.provided._session_factory,
-    # )
-
     # Repositories - get new session for each request
     user_repository = providers.Factory(
         UserRepository,
@@ -75,7 +71,7 @@ class Container(containers.DeclarativeContainer):
         session_or_factory=db.provided.get_session,
     )
 
-    # Services - get new session for each request
+    # Services
     user_service = providers.Factory(
         UserService,
         db=db.provided,

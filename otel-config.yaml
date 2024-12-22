@@ -1,0 +1,74 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  zipkin:
+    endpoint: 0.0.0.0:9411
+#  jaeger:
+#    protocols:
+#      grpc:
+#        endpoint: 0.0.0.0:14250
+#      thrift_http:
+#        endpoint: 0.0.0.0:14268
+
+processors:
+  batch:
+  memory_limiter:
+    # 80% of maximum memory up to 2G
+    limit_mib: 1500
+    # 25% of limit up to 2G
+    spike_limit_mib: 512
+    check_interval: 5s
+extensions:
+  health_check:
+  pprof:
+    endpoint: :1888
+  zpages:
+    endpoint: :55679
+  basicauth/client:
+    client_auth:
+      username: admin
+      password: ${OPENSEARCH_ADMIN_PASSWORD}
+
+exporters:
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    const_labels:
+      otelCollector: otelCollector1
+  otlp:
+    endpoint: "jaeger:4320"
+    tls:
+      insecure: true
+  debug:
+    verbosity: detailed
+  opensearch:
+    logs_index: opentelemetry-log
+    http:
+      endpoint: http://opensearch:9200
+      auth:
+        authenticator: basicauth/client
+      tls:
+        insecure: true
+
+service:
+  extensions: [pprof, zpages, health_check, basicauth/client]
+  pipelines:
+    traces:
+      receivers: [otlp,zipkin]
+      processors: [memory_limiter, batch]
+      exporters: [otlp,debug]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheus,debug]
+    logs:
+      receivers: [ otlp ]
+      processors: [ batch, memory_limiter ]
+      exporters: [ opensearch,debug ]
+  telemetry:
+      metrics:
+        level: detailed
+        address: 0.0.0.0:8888

@@ -6,7 +6,8 @@ from typing import AsyncGenerator, Any, Optional
 
 import redis.asyncio as redis
 
-from app.logger import logger
+from app.logger.logger import get_logger
+logger = get_logger(__name__)
 
 
 class QueueStatus(str, Enum):

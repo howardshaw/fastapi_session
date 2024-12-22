@@ -5,7 +5,8 @@ from temporalio.exceptions import ApplicationError
 
 from app.core.exceptions import InsufficientFundsError, AccountNotFoundError, AccountLockedError
 from app.services import TransactionService
-
+from app.logger import get_logger
+logger = get_logger(__name__)
 
 @dataclass
 class ActivityError:
@@ -33,7 +34,7 @@ class AccountActivities:
         try:
             await self._transaction_service.withdraw(account_id, amount)
         except (InsufficientFundsError, AccountNotFoundError) as e:
-            activity.logger.error(f"Withdraw failed: {e}")
+            logger.error(f"Withdraw failed: {e}")
             raise ApplicationError(
                 "BusinessError",
                 ActivityError.from_exception(e)
@@ -45,7 +46,7 @@ class AccountActivities:
         try:
             await self._transaction_service.deposit(account_id, amount)
         except AccountNotFoundError as e:
-            activity.logger.error(f"Deposit failed: {e}")
+            logger.error(f"Deposit failed: {e}")
             raise ApplicationError(
                 "BusinessError",
                 ActivityError.from_exception(e)
@@ -66,12 +67,12 @@ class AccountActivities:
                 amount
             )
         except (InsufficientFundsError, AccountNotFoundError) as e:
-            activity.logger.error(f"Transfer failed: {e}")
+            logger.error(f"Transfer failed: {e}")
             raise ApplicationError(
                 "BusinessError",
                 ActivityError.from_exception(e),
                 non_retryable=True,
             )
         except AccountLockedError as e:
-            activity.logger.error(f"Account locked: {e}")
+            logger.error(f"Account locked: {e}")
             raise

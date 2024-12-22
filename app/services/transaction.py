@@ -1,4 +1,3 @@
-import logging
 from typing import Dict, Any
 
 from sqlalchemy import select
@@ -7,10 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import Database
 from app.core.exceptions import AccountNotFoundError, DatabaseError, InsufficientFundsError, AccountLockedError
+from app.logger import get_logger
 from app.models import Account
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class TransactionService:

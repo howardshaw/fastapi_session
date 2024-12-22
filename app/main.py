@@ -1,4 +1,3 @@
-import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -11,11 +10,20 @@ from starlette.responses import Response
 from app.core.containers import Container
 from app.core.exceptions import OrderCreationError
 from app.core.metrics import REQUEST_COUNT, REQUEST_LATENCY, REGISTRY
+from app.core.observability.logs import setup_telemetry_logging
+from app.core.observability.metrics import setup_telemetry_metrics
+from app.core.observability.tracings import (
+    init_fastapi_instrumentation,
+    instrument_threads,
+    setup_telemetry_tracing,
+    shutdown_telemetry,
+)
+from app.logger.logger import get_logger, setup_logging
 from app.routers import users, transactions, translate, transform
+from app.settings import settings
 
-# 设置日志
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+setup_logging(settings=settings)
+logger = get_logger(__name__)
 
 
 class MetricsMiddleware(BaseHTTPMiddleware):
@@ -43,6 +51,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # 启动前的初始化
     container = Container()
 
+    settings = container.settings()
+    setup_logging(settings)
+    setup_telemetry_logging(settings)
+
+    setup_telemetry_tracing(settings)
+
+    setup_telemetry_metrics(settings)
+
     # 初始化数据库
     db = container.db()
     await db.init_db()
@@ -60,6 +76,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # 清理资源
     await container.shutdown_resources()
+    shutdown_telemetry()
     logger.info("Resources cleaned up")
 
 
@@ -83,11 +100,14 @@ app.include_router(transactions.router, prefix="/transactions", tags=["transacti
 app.include_router(translate.router, prefix="/translate", tags=["translate"])
 app.include_router(transform.router, prefix="/transform", tags=["transform"])
 
+init_fastapi_instrumentation(app)
+instrument_threads()
+
 
 # 配置异常处理
 @app.exception_handler(OrderCreationError)
 async def order_creation_error_handler(request: Request, exc: OrderCreationError):
-    logger.error(f"Order creation error: {exc}")
+    logger.error(f"Order creation error: {exc}", exc_info=True)
     return Response(
         status_code=400,
         content={"message": str(exc)},
@@ -106,4 +126,9 @@ async def general_exception_handler(request: Request, exc: Exception):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000,
+        log_config=None,  # 禁用默认日志配置
+    )

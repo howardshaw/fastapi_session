@@ -9,13 +9,15 @@ from temporalio.client import Client
 
 from app.core.containers import Container
 from app.core.queue_manager import QueueManager
-from app.logger import logger
+from app.logger.logger import get_logger
 from app.schemas.translate import TranslateRequest
 from app.settings import Settings
 from app.workflows.translate.activities import TranslateParams
 from app.workflows.translate.workflows import TranslateWorkflow
 
 router = APIRouter()
+
+logger = get_logger(__name__)
 
 
 @router.post("/")
@@ -26,6 +28,7 @@ async def translate(
         redis_client: redis.Redis = Depends(Provide[Container.redis_client]),
         settings: Settings = Depends(Provide[Container.settings]),
 ):
+    logger.info(f"translate request: {translate_request}")
     async def event_generator():
         try:
             task_id = str(uuid.uuid4())

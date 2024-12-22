@@ -6,8 +6,10 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessageChunk
 from temporalio import activity
 
-from app.logger import logger
 from app.core.queue_manager import QueueManager
+from app.logger.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -46,6 +48,7 @@ class TranslateActivities:
                 })
                 ret.append(chunk.content)
             logger.info(f"published chunk: {chunk}, {type(chunk)}")
+        logger.info(f"final ret: {ret}")
         return "".join(ret)
 
     @activity.defn

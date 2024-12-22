@@ -1,15 +1,15 @@
 import asyncio
-import logging
 from typing import Optional, Callable
 
 from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.logger import get_logger
 from app.models import User, Account
 from app.schemas.user import UserCreate
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -40,7 +40,7 @@ class UserRepository:
         await self.session.flush()
         await self.session.refresh(db_user)
 
-        await asyncio.sleep(20)
+        await asyncio.sleep(10)
 
         # Create associated account
         db_account = Account(

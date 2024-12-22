@@ -1,12 +1,12 @@
-import logging
 from typing import Callable
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import OrderCreationError
+from app.logger import get_logger
 from app.models import Order
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class OrderRepository:

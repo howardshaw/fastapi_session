@@ -1,16 +1,14 @@
-import logging
-
 from dependency_injector.wiring import inject, Provide
 from fastapi import APIRouter, Depends
 from sqlalchemy import text
 
 from app.core.containers import Container
 from app.core.database import Database
+from app.logger import get_logger
 from app.schemas.transaction import TransactionRequest, TransactionResponse
 from app.services import OrderService
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter()
 

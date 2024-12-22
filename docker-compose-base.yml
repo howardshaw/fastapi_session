@@ -9,7 +9,7 @@ services:
     ports:
       - 3306:3306
     volumes:
-      - /var/lib/mysql
+      - mysql_data:/var/lib/mysql
   temporal:
     container_name: temporal
     depends_on:
@@ -72,8 +72,93 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  otel-collector:
+    #    image: otel/opentelemetry-collector:latest
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    ports:
+      - "4317:4317"      # OTLP gRPC 接收端口
+      - "4318:4318"      # OTLP HTTP 接收端口
+      - "9411:9411"      # Zipkin 接收端口
+      - "14268:14268"    # Jaeger Thrift HTTP 接收端口
+      - "8888:8888"      # Collector 自身指标（Prometheus）
+      - "8889:8889"      # Prometheus 导出器
+      - "1888:1888"      # pprof 性能分析
+      - "55679:55679"    # zPages 调试页面
+    volumes:
+      - ./otel-config.yaml:/etc/otel-collector-config.yaml:ro # 将配置文件挂载到容器
+    command:
+      - --config=/etc/otel-collector-config.yaml
+    #    healthcheck:
+    #      test: ["CMD", "curl", "-f", "http://localhost:13133/healthz"]
+    #      interval: 30s
+    #      timeout: 5s
+    #      retries: 3
+    restart: unless-stopped
+    networks:
+      - temporal-network
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090" # Prometheus UI
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro # Prometheus 配置文件挂载
+    restart: unless-stopped
+    networks:
+      - temporal-network
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "14250:14250" # jaeger-collector gRPC server
+      - "6831:6831/udp" # gRPC agent
+      - "4320:4320"     # 修改的 OTLP GRPC 端口
+      - "4321:4321"     # 修改的 OTLP HTTP 端口
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - COLLECTOR_OTLP_GRPC_HOST_PORT=0.0.0.0:4320
+      - COLLECTOR_OTLP_HTTP_HOST_PORT=0.0.0.0:4321
+    restart: unless-stopped
+    networks:
+      - temporal-network
+  opensearch:
+    image: opensearchproject/opensearch:latest
+    container_name: opensearch
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - plugins.security.disabled=true
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"  # OpenSearch REST API
+      - "9600:9600"  # OpenSearch Performance Analyzer
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+    networks:
+      - temporal-network
+  opensearch-dashboard:
+    container_name: opensearch-dashboard
+    image: opensearchproject/opensearch-dashboards:latest
+    ports:
+      - "5601:5601"
+    environment:
+      - OPENSEARCH_HOSTS=["http://opensearch:9200"]
+      - DISABLE_SECURITY_DASHBOARDS_PLUGIN=true
+    networks:
+      - temporal-network
+
 volumes:
   redis_data:
+  mysql_data:
+  opensearch_data:
 
 networks:
   temporal-network:

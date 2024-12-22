@@ -6,11 +6,12 @@ from temporalio.client import Client
 from temporalio.exceptions import TemporalError
 
 from app.core.containers import Container
-from app.logger import logger
+from app.logger import get_logger
 from app.schemas.transfer import TransferRequest, TransferResponse
 from app.settings import Settings
 from app.workflows.transfer.workflows import TransferWorkflow
 
+logger = get_logger(__name__)
 router = APIRouter()
 
 
