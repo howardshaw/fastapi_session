@@ -3,6 +3,7 @@ from typing import AsyncGenerator
 
 import prometheus_client
 from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
@@ -108,19 +109,21 @@ instrument_threads()
 # 配置异常处理
 @app.exception_handler(OrderCreationError)
 async def order_creation_error_handler(request: Request, exc: OrderCreationError):
-    logger.error(f"Order creation error: {exc}", exc_info=True)
-    return Response(
+    error_msg = str(exc)
+    logger.error("Order creation error: %s", error_msg, exc_info=exc)
+    return JSONResponse(
         status_code=400,
-        content={"message": str(exc)},
+        content={"message": error_msg}
     )
 
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Unexpected error: {exc}", exc_info=True)
-    return Response(
+    error_msg = str(exc)
+    logger.error("Unexpected error: %s", error_msg, exc_info=exc)
+    return JSONResponse(
         status_code=500,
-        content={"message": "Internal server error"},
+        content={"message": "Internal server error"}
     )
 
 
