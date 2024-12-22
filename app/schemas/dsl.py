@@ -72,6 +72,44 @@ class DSLRequest(BaseModel):
         }]
     )
 
+    def to_dsl_input(self) -> "DSLInput":
+        """将 DSLRequest 转换为 DSLInput"""
+        from app.workflows.dsl.workflows import DSLInput, ActivityStatement, ActivityInvocation, \
+            SequenceStatement, Sequence, ParallelStatement, Parallel
+
+        def convert_activity(act_def: Dict[str, Any]) -> ActivityStatement:
+            return ActivityStatement(
+                activity=ActivityInvocation(
+                    name=act_def["name"],
+                    arguments=act_def["arguments"],
+                    result=act_def["result"]
+                )
+            )
+
+        def convert_sequence(seq_def: Dict[str, Any]) -> SequenceStatement:
+            elements = []
+            for elem in seq_def["elements"]:
+                if "activity" in elem:
+                    elements.append(convert_activity(elem["activity"]))
+                elif "parallel" in elem:
+                    elements.append(convert_parallel(elem["parallel"]))
+            return SequenceStatement(sequence=Sequence(elements=elements))
+
+        def convert_parallel(par_def: Dict[str, Any]) -> ParallelStatement:
+            branches = []
+            for branch in par_def["branches"]:
+                if "sequence" in branch:
+                    branches.append(convert_sequence(branch["sequence"]))
+            return ParallelStatement(parallel=Parallel(branches=branches))
+
+        # 转换根节点
+        root_statement = convert_sequence(self.root.sequence.dict())
+
+        return DSLInput(
+            root=root_statement,
+            variables=self.variables
+        )
+
     model_config = {
         "json_schema_extra": {
             "example": {
