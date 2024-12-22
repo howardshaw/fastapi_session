@@ -1,5 +1,5 @@
-from typing import Dict, List, Optional, Union, Any, Annotated
-from fastapi import Body
+from typing import Dict, List, Any
+
 from pydantic import BaseModel, Field
 
 
@@ -35,12 +35,46 @@ class RootDefinition(BaseModel):
 
 class DSLRequest(BaseModel):
     """工作流 DSL 请求"""
-    variables: Dict[str, str] = Field(default_factory=dict, description="工作流变量定义")
-    root: RootDefinition = Field(..., description="工作流根节点定义")
+    variables: Dict[str, str] = Field(
+        default_factory=dict,
+        description="工作流变量定义",
+        examples=[{"arg1": "value1", "arg2": "value2"}]
+    )
+    root: RootDefinition = Field(
+        ...,
+        description="工作流根节点定义",
+        examples=[{
+            "sequence": {
+                "elements": [
+                    {
+                        "activity": {
+                            "name": "activity1",
+                            "arguments": ["arg1"],
+                            "result": "result1"
+                        }
+                    },
+                    {
+                        "activity": {
+                            "name": "activity2",
+                            "arguments": ["result1"],
+                            "result": "result2"
+                        }
+                    },
+                    {
+                        "activity": {
+                            "name": "activity3",
+                            "arguments": ["arg2", "result2"],
+                            "result": "result3"
+                        }
+                    }
+                ]
+            }
+        }]
+    )
 
-    class Config:
-        schema_extra = {
-            "examples": [{
+    model_config = {
+        "json_schema_extra": {
+            "example": {
                 "variables": {
                     "arg1": "value1",
                     "arg2": "value2"
@@ -72,8 +106,9 @@ class DSLRequest(BaseModel):
                         ]
                     }
                 }
-            }]
+            }
         }
+    }
 
 
 # 需要在类定义后更新 Forward References
