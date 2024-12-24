@@ -40,7 +40,3 @@ class UserRepository(BaseRepository):
         stmt = select(self.model).filter(self.model.username == username)
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
-
-    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
-        """验证密码"""
-        return pwd_context.verify(plain_password, hashed_password)
