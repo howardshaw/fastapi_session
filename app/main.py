@@ -66,6 +66,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     container = Container()
     app.container = container
     settings = container.settings()
+    logger.info(f"database url: {settings.DATABASE_URL}")
     
     # 初始化可观测性组件
     setup_telemetry_logging(settings)

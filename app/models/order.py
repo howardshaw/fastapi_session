@@ -1,19 +1,37 @@
-from datetime import datetime
-
-from sqlalchemy import Column, Integer, String, ForeignKey, Float, DateTime
+from sqlalchemy import Column, Integer, String, Float
 from sqlalchemy.orm import relationship
+from sqlmodel import Field, Relationship,ForeignKey
 
-from .base import Base
+from .base import BaseModel
 
 
-class Order(Base):
+class Order(BaseModel, table=True):
+    """订单模型"""
     __tablename__ = "orders"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    description = Column(String(256))
-    amount = Column(Float, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    user_id: int = Field(
+        sa_column=Column(
+            Integer,
+            ForeignKey("users.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+            comment="User ID"
+        )
+    )
+    description: str = Field(
+        sa_column=Column(
+            String(128),
+            nullable=False,
+            comment="Order description"
+        )
+    )
+    amount: float = Field(
+        sa_column=Column(
+            Float,
+            nullable=False,
+            comment="Order amount"
+        )
+    )
 
     # Relationships
-    user = relationship("User", back_populates="orders")
+    user: "User" = Relationship(back_populates="orders")

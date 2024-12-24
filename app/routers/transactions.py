@@ -52,7 +52,7 @@ async def create_transaction(
 
     # 执行实际的业务事务
     logger.info(f"start real business\n\n\n\n")
-    result = await order_service.transaction(request.user_name, request.order_description, request.amount)
+    result = await order_service.transaction(request.user_data, request.order_description, request.amount)
     return TransactionResponse(
         result=result,
     )

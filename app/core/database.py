@@ -20,7 +20,7 @@ from app.core.metrics import (
     DB_ERRORS
 )
 from app.logger.logger import get_logger
-from app.models import Base
+from app.models import BaseModel
 
 logger = get_logger(__name__)
 
@@ -135,7 +135,7 @@ class Database:
     async def init_db(self) -> None:
         """Initialize database tables."""
         async with self._engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+            await conn.run_sync(BaseModel.metadata.create_all)
             logger.info("Database tables created")
 
     def transactional(self, func: AsyncCallable) -> AsyncCallable:

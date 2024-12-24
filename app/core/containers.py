@@ -7,6 +7,7 @@ from redis.asyncio import Redis
 from app.core.clients import TemporalClientFactory
 from app.core.database import Database
 from app.repositories import UserRepository, OrderRepository
+from app.repositories.account import AccountRepository
 from app.services import UserService, TransactionService, OrderService
 from app.settings import get_settings
 from app.workflows.dsl.activities import DSLActivities
@@ -74,11 +75,17 @@ class Container(containers.DeclarativeContainer):
         session_or_factory=db.provided.get_session,
     )
 
+    account_repository = providers.Factory(
+        AccountRepository,
+        session_or_factory=db.provided.get_session,
+    )
+
     # Services
     user_service = providers.Factory(
         UserService,
         db=db.provided,
         user_repository=user_repository,
+        account_repository=account_repository,
     )
 
     order_service = providers.Factory(

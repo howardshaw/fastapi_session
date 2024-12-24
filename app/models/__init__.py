@@ -1,6 +1,6 @@
 from .account import Account
+from .base import BaseModel
 from .order import Order
 from .user import User
-from .base import Base
 
-__all__ = ["Account", "Order", "User", "Base"]
+__all__ = ["Account", "Order", "User", "BaseModel"]

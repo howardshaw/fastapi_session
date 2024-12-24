@@ -2,6 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import List
 
+from pydantic import ValidationInfo, field_validator
 from pydantic_settings import BaseSettings
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -59,7 +60,55 @@ class Settings(BaseSettings):
     TEMPORAL_TRANSLATE_QUEUE: str = "translate-task-queue"
     TEMPORAL_DSL_QUEUE: str = "dsl-task-queue"
 
-    DATABASE_URL: str = "sqlite+aiosqlite:///./test.db"
+    # DATABASE
+    DB_USER: str = ""
+    DB_PASSWORD: str = ""
+    DB_HOST: str = "127.0.0.1"
+    DB_PORT: str = "3306"
+    DB_ENGINE: str = ""
+    DB_DATABASE: str = ""
+    DATABASE_URL: str = None
+
+    @field_validator("DATABASE_URL", mode="before")
+    def assemble_db_connection(  # pylint: disable=no-self-argument
+            cls, v: str, info: ValidationInfo
+    ):
+        if v is None:
+            db_engine = info.data['DB_ENGINE']
+            db_user = info.data['DB_USER']
+            db_password = info.data['DB_PASSWORD']
+            db_host = info.data['DB_HOST']
+            db_port = info.data['DB_PORT']
+            db_database = info.data['DB_DATABASE']
+
+            if db_engine == "mysql":
+                return f"mysql+aiomysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_database}?charset=utf8mb4"
+            elif db_engine == "postgresql":
+                return f"postgresql+asyncpg://{db_user}:{db_password}@{db_host}:{db_port}/{db_database}"
+            elif db_engine == "sqlite":
+                return f"sqlite+aiosqlite:///{db_database}"
+            else:
+                raise ValueError("Unsupported DB_ENGINE. Choose from 'mysql', 'postgresql', or 'sqlite'.")
+        return v
+
+    def get_sync_database_url(self):
+        """返回同步的数据库 URI，供 Alembic 使用"""
+        db_engine = self.DB_ENGINE
+        db_user = self.DB_USER
+        db_password = self.DB_PASSWORD
+        db_host = self.DB_HOST
+        db_port = self.DB_PORT
+        db_database = self.DB_DATABASE
+
+        if db_engine == "mysql":
+            return f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_database}?charset=utf8mb4"
+        elif db_engine == "postgresql":
+            return f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_database}"
+        elif db_engine == "sqlite":
+            return f"sqlite:///{db_database}"
+        else:
+            # 对于其他数据库，直接返回异步版本
+            return self.DATABASE_URL
 
     class Config:
         # env_file = ".env"

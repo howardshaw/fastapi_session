@@ -1,9 +1,12 @@
-from fastapi import HTTPException, Request
-from fastapi.responses import JSONResponse
-from typing import Type, Callable, Dict, Any, Union
 from logging import getLogger
+from typing import Type, Callable, Dict, Any, Optional
+
+from fastapi import HTTPException, Request
+from fastapi import status
+from fastapi.responses import JSONResponse
 
 logger = getLogger(__name__)
+
 
 # Base Exception
 class AppException(Exception):
@@ -80,9 +83,35 @@ class ValidationError(AppException):
     detail = "Validation error"
 
 
+class DuplicatedError(HTTPException):
+    def __init__(self, detail: Any = None, headers: Optional[Dict[str, Any]] = None) -> None:
+        super().__init__(status.HTTP_400_BAD_REQUEST, detail, headers)
+
+
+class AuthError(HTTPException):
+    def __init__(self, detail: Any = None, headers: Optional[Dict[str, Any]] = None) -> None:
+        super().__init__(status.HTTP_403_FORBIDDEN, detail, headers)
+
+
+class NotFoundError(HTTPException):
+    def __init__(self, detail: Any = None, headers: Optional[Dict[str, Any]] = None) -> None:
+        super().__init__(status.HTTP_404_NOT_FOUND, detail, headers)
+
+
+class ValidationError(HTTPException):
+    def __init__(self, detail: Any = None, headers: Optional[Dict[str, Any]] = None) -> None:
+        super().__init__(status.HTTP_422_UNPROCESSABLE_ENTITY, detail, headers)
+
+
+class InternalError(HTTPException):
+    def __init__(self, detail: Any = None, headers: Optional[Dict[str, Any]] = None) -> None:
+        super().__init__(status.HTTP_500_INTERNAL_SERVER_ERROR, detail, headers)
+
+
 # Exception Handlers
 def create_exception_handler(exc_class: Type[AppException]) -> Callable:
     """Factory function to create exception handlers"""
+
     async def handler(request: Request, exc: AppException) -> JSONResponse:
         error_msg = str(exc)
         logger.error(
@@ -93,22 +122,23 @@ def create_exception_handler(exc_class: Type[AppException]) -> Callable:
                 "request_method": request.method,
             }
         )
-        
+
         # 构建响应内容
         content = {
             "error": exc_class.__name__,
             "message": error_msg,
             "status_code": exc.status_code
         }
-        
+
         # 如果异常包含额外详情，添加到响应中
         if hasattr(exc, 'details'):
             content["details"] = exc.details
-        
+
         return JSONResponse(
             status_code=exc.status_code,
             content=content
         )
+
     return handler
 
 
@@ -159,7 +189,7 @@ def register_exception_handlers(app: Any) -> None:
     # Register custom exception handlers
     for exc_class in AppException.__subclasses__():
         app.add_exception_handler(exc_class, create_exception_handler(exc_class))
-    
+
     # Register default exception handlers
     app.add_exception_handler(Exception, default_exception_handler)
     app.add_exception_handler(HTTPException, http_exception_handler)

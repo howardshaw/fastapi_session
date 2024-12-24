@@ -1,19 +1,30 @@
-from datetime import datetime
+from sqlalchemy import Column
+from sqlmodel import Field, Relationship, ForeignKey, Integer, Float
 
-from sqlalchemy import Column, Integer, ForeignKey, Float, DateTime
-from sqlalchemy.orm import relationship
-
-from .base import Base
+from .base import BaseModel
 
 
-class Account(Base):
+class Account(BaseModel, table=True):
+    """账户模型"""
     __tablename__ = "accounts"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    balance = Column(Float, default=0.0)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    user_id: int = Field(
+        sa_column=Column(
+            Integer,
+            ForeignKey("users.id", ondelete="CASCADE"),
+            unique=True,
+            nullable=False,
+            comment="User ID"
+        )
+    )
+    balance: float = Field(
+        sa_column=Column(
+            Float,
+            nullable=False,
+            default=0.0,
+            comment="Account balance"
+        )
+    )
 
     # Relationships
-    user = relationship("User", back_populates="account")
+    user: "User" = Relationship(back_populates="account")

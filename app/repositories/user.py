@@ -1,76 +1,46 @@
-import asyncio
 from typing import Optional, Callable
 
-from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import DuplicatedError
 from app.logger import get_logger
-from app.models import User, Account
-from app.schemas.user import UserCreate
+from app.models import User
+from app.repositories.base import BaseRepository
 
 logger = get_logger(__name__)
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+class UserRepository(BaseRepository):
+    """用户仓储，处理用户相关的数据库操作"""
 
-class UserRepository:
-    def __init__(
-            self, session_or_factory: AsyncSession | Callable[[], AsyncSession]) -> None:
-        self._session_or_factory = session_or_factory
+    def __init__(self, session_or_factory: AsyncSession | Callable[[], AsyncSession]) -> None:
+        super().__init__(session_or_factory, User)
 
-    @property
-    def session(self) -> AsyncSession:
-        if isinstance(self._session_or_factory, AsyncSession):
-            return self._session_or_factory
-        return self._session_or_factory()
-
-    async def create_user_with_account(self, user_data: UserCreate) -> User:
+    async def create_user(self, user: User) -> User:
         """创建用户和关联账户"""
-        # Hash the password
-        hashed_password = pwd_context.hash(user_data.password)
 
-        # Create new user
-        db_user = User(
-            email=user_data.email,
-            username=user_data.username,
-            hashed_password=hashed_password
-        )
-        self.session.add(db_user)
-        await self.session.flush()
-        await self.session.refresh(db_user)
+        # 创建用户
+        try:
+            db_user = await self.create(user)
 
-        await asyncio.sleep(10)
+            return db_user
+        except Exception as e:
+            logger.error(f"Failed to create user: {str(e)}")
+            raise DuplicatedError(detail="Username or email already exists")
 
-        # Create associated account
-        db_account = Account(
-            user=db_user,
-            balance=10.0
-        )
-        self.session.add(db_account)
-        await self.session.flush()
-
-        return db_user
-
-    async def get_user_by_email(self, email: str) -> Optional[User]:
+    async def get_by_email(self, email: str) -> Optional[User]:
         """通过邮箱获取用户"""
-        query = select(User).where(User.email == email)
-        result = await self.session.execute(query)
+        stmt = select(self.model).filter(self.model.email == email)
+        result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def get_user_by_id(self, user_id: int) -> Optional[User]:
-        """通过ID获取用户"""
-        logger.info(f"get_user_by_id: {user_id} {self.session}")
-        query = select(User).where(User.id == user_id)
-        result = await self.session.execute(query)
+    async def get_by_username(self, username: str) -> Optional[User]:
+        """通过用户名获取用户"""
+        stmt = select(self.model).filter(self.model.username == username)
+        result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def create_user(self, username: str) -> User:
-        """创建用户（简单版本，用于测试）"""
-        logger.info(f"create_user: {username} {self.session}")
-        user = User(username=username)
-
-        self.session.add(user)
-        await self.session.flush()
-        await self.session.refresh(user)
-        return user
+    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
+        """验证密码"""
+        return pwd_context.verify(plain_password, hashed_password)

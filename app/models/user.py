@@ -1,21 +1,28 @@
-from datetime import datetime
+from typing import Optional, List
 
-from sqlalchemy import Column, Integer, String, DateTime
-from sqlalchemy.orm import relationship
+from sqlmodel import Column
+from sqlmodel import Field, Relationship, String
 
-from .base import Base
+from .base import BaseModel
 
 
-class User(Base):
+class User(BaseModel, table=True):
+    """用户模型"""
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(64), unique=True, index=True)
-    email = Column(String(128), unique=True, index=True)
-    hashed_password = Column(String(128))
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    username: str = Field(
+        sa_column=Column(String(128), unique=True, index=True, nullable=False, comment="User name")
+    )
+    email: str = Field(
+        sa_column=Column(String(128), unique=True, index=True, nullable=False, comment="User email address")
+    )
+    hashed_password: str = Field(
+        sa_column=Column(String(128), nullable=False, comment="User password hash")
+    )
 
     # Relationships
-    account = relationship("Account", back_populates="user", uselist=False)
-    orders = relationship("Order", back_populates="user")
+    account: Optional["Account"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"uselist": False}
+    )
+    orders: List["Order"] = Relationship(back_populates="user")
