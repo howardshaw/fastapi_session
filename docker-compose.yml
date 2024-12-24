@@ -14,6 +14,7 @@ services:
       - DATABASE_URL=mysql+aiomysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}?charset=utf8mb4
       - TEMPORAL_HOST=temporal:7233
       - REDIS_URL=redis://temporal-redis:6379
+      - OTLP_ENDPOINT=http://otel-collector:4317
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     networks:
       - temporal-network
@@ -29,6 +30,7 @@ services:
       - DATABASE_URL=mysql+aiomysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}?charset=utf8mb4
       - TEMPORAL_HOST=temporal:7233
       - REDIS_URL=redis://temporal-redis:6379
+      - OTLP_ENDPOINT=http://otel-collector:4317
     command: python -m app.workflows.transfer.worker
     networks:
       - temporal-network
@@ -48,7 +50,28 @@ services:
       - OPENAI_BASE_URL=${OPENAI_BASE_URL}
       - OPENAI_MODEL=${OPENAI_MODEL}
       - REDIS_URL=redis://temporal-redis:6379
+      - OTLP_ENDPOINT=http://otel-collector:4317
     command: python -m app.workflows.translate.worker
+    networks:
+      - temporal-network
+    depends_on:
+      - temporal
+      - server
+
+  dsl-worker:
+    container_name: dsl-worker
+    build: .
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=mysql+aiomysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}?charset=utf8mb4
+      - TEMPORAL_HOST=temporal:7233
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL}
+      - OPENAI_MODEL=${OPENAI_MODEL}
+      - REDIS_URL=redis://temporal-redis:6379
+      - OTLP_ENDPOINT=http://otel-collector:4317
+    command: python -m app.workflows.dsl.worker
     networks:
       - temporal-network
     depends_on:
