@@ -38,6 +38,7 @@ htmlcov/
 
 # 日志
 *.log
+logs
 
 # 环境变量
 .env
@@ -45,4 +46,4 @@ htmlcov/
 
 # 数据库
 *.db
-*.sqlite3 
+*.sqlite3

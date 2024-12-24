@@ -12,7 +12,11 @@ from app.settings import Settings
 from app.workflows.transfer.workflows import TransferWorkflow
 
 logger = get_logger(__name__)
-router = APIRouter()
+router = APIRouter(
+    prefix="/transform",
+    tags=["transform"],
+    responses={404: {"description": "Not found"}},
+)
 
 
 @router.post("/", response_model=TransferResponse)

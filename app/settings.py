@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "JSON"
     LOG_COLORS: bool = True
+    LOG_FILE_MAX_BYTES: int = 10 * 1024 * 1024  # 默认10MB
+    LOG_FILE_BACKUP_COUNT: int = 5  # 默认保留5个备份
+    LOG_FILE_PATH: str = "logs/app.log"  # 默认日志文件路径
     METRICS_CONSOLE: bool = False
     INCLUDE_TRACE_ID: bool = True
     SHOW_TRACEBACKS: bool = True

@@ -2,7 +2,7 @@
 name = "fastapi-session"
 version = "0.1.0"
 description = ""
-authors = ["xiaohuayuan <xiaohuayuan@bytedance.com>"]
+authors = ["howardshaw <howardshaw12@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]

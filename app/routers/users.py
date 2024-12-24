@@ -8,7 +8,11 @@ from app.schemas.user import UserCreate, UserResponse
 from app.services import UserService
 
 logger = get_logger(__name__)
-router = APIRouter()
+router = APIRouter(
+    prefix="/users",
+    tags=["users"],
+    responses={404: {"description": "Not found"}},
+)
 
 
 @router.get("/")

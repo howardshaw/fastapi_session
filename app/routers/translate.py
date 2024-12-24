@@ -15,7 +15,11 @@ from app.settings import Settings
 from app.workflows.translate.activities import TranslateParams
 from app.workflows.translate.workflows import TranslateWorkflow
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/translate",
+    tags=["translate"],
+    responses={404: {"description": "Not found"}},
+)
 
 logger = get_logger(__name__)
 

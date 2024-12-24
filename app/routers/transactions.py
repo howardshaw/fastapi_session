@@ -10,7 +10,11 @@ from app.services import OrderService
 
 logger = get_logger(__name__)
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/transaction",
+    tags=["transaction"],
+    responses={404: {"description": "Not found"}},
+)
 
 
 @router.post("/", response_model=TransactionResponse)

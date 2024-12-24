@@ -1,5 +1,7 @@
 import logging
+import os
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from typing import Any
 
 import structlog
@@ -40,18 +42,38 @@ def get_logger(name: str, **kwargs) -> Any:
 def setup_logging(
         settings: Settings,
 ) -> None:
-    # 配置日志轮换
+    """设置日志配置
+
+    Args:
+        settings: 应用配置对象
+
+    配置说明：
+        - 日志文件位置：由 settings.LOG_FILE_PATH 指定
+        - 日志轮转：
+            - 单个文件最大大小：由 settings.LOG_FILE_MAX_BYTES 指定（默认10MB）
+            - 保留文件数：由 settings.LOG_FILE_BACKUP_COUNT 指定（默认5个）
+            - 使用 UTF-8 编码
+        - 支持两种输出格式：
+            - CONSOLE：彩色控制台输出
+            - JSON：结构化 JSON 输出
+    """
+    # 创建日志目录
+    log_path = Path(settings.LOG_FILE_PATH)
+    log_dir = log_path.parent
+    log_dir.mkdir(exist_ok=True)
+
+    # 配置日志轮转
     rotating_handler = RotatingFileHandler(
-        filename="app.log",  # 日志文件名
-        maxBytes=10 * 1024 * 1024,  # 每个日志文件的最大大小（10MB）
-        backupCount=5,  # 最多保留的日志文件数量
-        encoding="utf-8"  # 文件编码
+        filename=str(log_path),
+        maxBytes=settings.LOG_FILE_MAX_BYTES,
+        backupCount=settings.LOG_FILE_BACKUP_COUNT,
+        encoding="utf-8"
     )
 
     # 配置日志格式
     logging.basicConfig(
         handlers=[rotating_handler],
-        level=logging.INFO,
+        level=settings.LOG_LEVEL,
     )
 
     shared_processors = [
@@ -85,15 +107,11 @@ def setup_logging(
                 structlog.processors.JSONRenderer()
             ]
         case _:
-            raise ValueError(f"Unknown logging format: {format}")
+            raise ValueError(f"Unknown logging format: {settings.LOG_FORMAT}")
 
     structlog.configure(
-        # logger_factory=RichPrintLoggerFactory(),
         logger_factory=LoggerFactory(),
         processors=shared_processors + output_processors,
         context_class=threadlocal.wrap_dict(dict),
-        # wrapper_class=structlog.make_filtering_bound_logger(
-        #     logging.getLevelName(settings.LOG_LEVEL)
-        # ),
         cache_logger_on_first_use=True,
     )

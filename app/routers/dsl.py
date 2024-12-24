@@ -10,7 +10,11 @@ from app.schemas.dsl import DSLRequest
 from app.settings import Settings
 from app.workflows.dsl.workflows import DSLWorkflow
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/dsl",
+    tags=["dsl"],
+    responses={404: {"description": "Not found"}},
+)
 logger = get_logger(__name__)
 
 
