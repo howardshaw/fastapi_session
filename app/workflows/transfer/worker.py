@@ -7,6 +7,7 @@ from temporalio.worker import Worker
 
 from app.core.containers import Container
 from app.logger import get_logger, setup_logging
+from app.settings import Settings
 from app.workflows.transfer.activities import AccountActivities
 from app.workflows.transfer.workflows import TransferWorkflow
 
@@ -15,6 +16,7 @@ logger = get_logger(__name__)
 
 @inject
 async def create_worker(
+        settings: Settings = Provide[Container.settings],
         client: Client = Provide[Container.temporal_client],
         activities: AccountActivities = Provide[Container.account_activities]
 ) -> Worker:
@@ -23,7 +25,7 @@ async def create_worker(
 
     return Worker(
         client,
-        task_queue="transfer-task-queue",
+        task_queue=settings.TEMPORAL_TRANSFER_QUEUE,
         workflows=[TransferWorkflow],
         activities=[
             activities.withdraw_activity,

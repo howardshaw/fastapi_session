@@ -7,6 +7,7 @@ from temporalio.worker import Worker
 
 from app.core.containers import Container
 from app.logger import get_logger, setup_logging
+from app.settings import Settings
 from app.workflows.dsl.activities import DSLActivities
 from app.workflows.dsl.workflows import DSLWorkflow
 
@@ -15,6 +16,7 @@ logger = get_logger(__name__)
 
 @inject
 async def create_worker(
+        settings: Settings = Provide[Container.settings],
         client: Client = Provide[Container.temporal_client],
         activities: DSLActivities = Provide[Container.dsl_activities]
 ) -> Worker:
@@ -23,7 +25,7 @@ async def create_worker(
 
     return Worker(
         client,
-        task_queue="dsl-task-queue",
+        task_queue=settings.TEMPORAL_DSL_QUEUE,
         activities=[
             activities.activity1,
             activities.activity2,
