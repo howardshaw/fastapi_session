@@ -51,6 +51,11 @@ class Settings(BaseSettings):
     MAX_EXPORT_BATCH_SIZE: int = 512
     SCHEDULE_DELAY_MILLIS: int = 5000
 
+    SECRET_KEY: str = "your-secret-key-here"  # 在生产环境中应该使用安全的密钥
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    COOKIE_SECURE: bool = False  # 在生产环境中应设置为True
+
     REDIS_URL: str = "redis://localhost:6379"
     OPENAI_API_KEY: str = ""
     OPENAI_BASE_URL: str = "https://api.openai-hk.com/v1"

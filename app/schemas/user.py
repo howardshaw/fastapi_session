@@ -1,3 +1,5 @@
+import uuid
+
 from pydantic import BaseModel, EmailStr, constr
 from typing import Optional
 from datetime import datetime
@@ -11,7 +13,7 @@ class UserCreate(UserBase):
     password: constr(min_length=8)
 
 class UserResponse(UserBase):
-    id: int
+    id: uuid.UUID
     created_at: datetime
     updated_at: datetime
 
@@ -23,11 +25,11 @@ class AccountBase(BaseModel):
     balance: float = 0.0
 
 class AccountCreate(AccountBase):
-    user_id: int
+    user_id: uuid.UUID
 
 class AccountResponse(AccountBase):
-    id: int
-    user_id: int
+    id: uuid.UUID
+    user_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
 
@@ -40,11 +42,11 @@ class OrderBase(BaseModel):
     amount: float
 
 class OrderCreate(OrderBase):
-    user_id: int
+    user_id: uuid.UUID
 
 class OrderResponse(OrderBase):
-    id: int
-    user_id: int
+    id: uuid.UUID
+    user_id: uuid.UUID
     created_at: datetime
 
     class Config:

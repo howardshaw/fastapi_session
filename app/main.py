@@ -21,9 +21,18 @@ from app.core.observability.tracings import (
     instrument_threads
 )
 from app.logger.logger import get_logger, setup_logging
-from app.routers import users, transactions, translate, transform, dsl, monitoring
+from app.routers import (
+    users,
+    transactions,
+    translate,
+    transform,
+    dsl,
+    workspace,
+    monitoring,
+    auth
+)
 from app.settings import settings
-
+from app.middlewares.auth import AuthMiddleware
 
 # 初始化日志
 setup_logging(settings=settings)
@@ -32,26 +41,27 @@ logger = get_logger(__name__)
 
 class MetricsMiddleware(BaseHTTPMiddleware):
     """中间件：记录请求计数和延迟"""
+
     async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
+            self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         method = request.method
         path = request.url.path
-        
+
         # 记录请求延迟
         with REQUEST_LATENCY.labels(
-            method=method,
-            endpoint=path
+                method=method,
+                endpoint=path
         ).time():
             response = await call_next(request)
-        
+
         # 记录请求计数
         REQUEST_COUNT.labels(
             method=method,
             endpoint=path,
             http_status=response.status_code
         ).inc()
-        
+
         return response
 
 
@@ -67,12 +77,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     app.container = container
     settings = container.settings()
     logger.info(f"database url: {settings.DATABASE_URL}")
-    
+
     # 初始化可观测性组件
     setup_telemetry_logging(settings)
     setup_telemetry_metrics(settings)
     setup_telemetry_tracing(settings)
-    
+
     # 初始化数据库
     db = container.db()
     await db.init_db()
@@ -90,6 +100,8 @@ def create_app() -> FastAPI:
     创建并配置 FastAPI 应用
     """
     app = FastAPI(lifespan=lifespan)
+
+    container = Container()
     
     # CORS 配置
     app.add_middleware(
@@ -99,20 +111,34 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
+
+    # 注册认证中间件
+    app.add_middleware(
+        AuthMiddleware,
+        auth_service=container.auth_service(),
+        exclude_paths=[
+            "/docs",
+            "/redoc",
+            "/openapi.json",
+            "/metrics",
+            "/health",
+            "/auth"
+        ]
+    )
+
     # 注册中间件
     app.add_middleware(MetricsMiddleware)
-    
+
     # 注册路由
     _register_routers(app)
-    
+
     # 注册异常处理器
     register_exception_handlers(app)
-    
+
     # 初始化可观测性
     init_fastapi_instrumentation(app)
     instrument_threads()
-    
+
     return app
 
 
@@ -125,11 +151,14 @@ def _register_routers(app: FastAPI) -> None:
     app.include_router(translate.router)
     app.include_router(transform.router)
     app.include_router(dsl.router)
+    app.include_router(workspace.router)
     app.include_router(monitoring.router)
+    app.include_router(auth.router)
 
 
 app = create_app()
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

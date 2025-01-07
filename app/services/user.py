@@ -1,3 +1,4 @@
+import uuid
 from typing import Optional
 
 from app.core.database import Database
@@ -42,7 +43,7 @@ class UserService:
         """
         return await self.user_repository.get_by_email(email)
 
-    async def get_user_by_id(self, user_id: int) -> Optional[User]:
+    async def get_user_by_id(self, user_id: uuid.UUID) -> Optional[User]:
         """
         通过ID查询用户
         只读操作，使用普通session

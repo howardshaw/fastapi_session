@@ -8,7 +8,14 @@ from app.core.clients import TemporalClientFactory
 from app.core.database import Database
 from app.repositories import UserRepository, OrderRepository
 from app.repositories.account import AccountRepository
-from app.services import UserService, TransactionService, OrderService
+from app.repositories.workspace import WorkspaceRepository
+from app.services import (
+    UserService,
+    TransactionService,
+    OrderService,
+    WorkspaceService,
+)
+from app.services.auth import AuthService
 from app.settings import get_settings
 from app.workflows.dsl.activities import DSLActivities
 from app.workflows.transfer.activities import AccountActivities
@@ -23,11 +30,15 @@ class Container(containers.DeclarativeContainer):
     wiring_config = containers.WiringConfiguration(
         modules=[
             "app.main",
+            "app.core.auth",
             "app.routers.users",
+            "app.routers.auth",
             "app.routers.transactions",
             "app.routers.translate",
             "app.routers.transform",
             "app.routers.dsl",
+            "app.routers.workspace",
+            "app.services.auth",
             "app.workflows.transfer.worker",
             "app.workflows.translate.worker",
             "app.workflows.dsl.worker",
@@ -80,12 +91,24 @@ class Container(containers.DeclarativeContainer):
         session_or_factory=db.provided.get_session,
     )
 
+    workspace_repository = providers.Factory(
+        WorkspaceRepository,
+        session_or_factory=db.provided.get_session,
+    )
+
     # Services
     user_service = providers.Factory(
         UserService,
         db=db.provided,
         user_repository=user_repository,
         account_repository=account_repository,
+    )
+
+    # Auth dependencies
+    auth_service = providers.Factory(
+        AuthService,
+        settings=settings,
+        user_service=user_service,
     )
 
     order_service = providers.Factory(
@@ -100,6 +123,12 @@ class Container(containers.DeclarativeContainer):
         db=db.provided,
     )
 
+    workspace_service = providers.Factory(
+        WorkspaceService,
+        db=db.provided,
+        workspace_repository=workspace_repository,
+    )
+
     # Activities
     account_activities = providers.Factory(
         AccountActivities,
@@ -111,6 +140,7 @@ class Container(containers.DeclarativeContainer):
         llm=llm,
         redis_client=redis_client
     )
+
     dsl_activities = providers.Factory(
         DSLActivities
     )

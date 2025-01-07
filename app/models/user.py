@@ -21,7 +21,7 @@ class User(BaseModel, table=True):
     )
 
     # Relationships
-    account: Optional["Account"] = Relationship(
+    account: "Account" = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"uselist": False}
     )

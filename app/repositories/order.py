@@ -1,3 +1,4 @@
+import uuid
 from typing import Callable, Optional, List
 
 from sqlalchemy import select
@@ -29,7 +30,7 @@ class OrderRepository(BaseRepository):
 
     async def get_user_orders(
             self,
-            user_id: int,
+            user_id: uuid.UUID,
             *,
             skip: int = 0,
             limit: int = 100
@@ -48,7 +49,7 @@ class OrderRepository(BaseRepository):
         query = self.filter(user_id=user_id)
         return await self.get_multi(skip=skip, limit=limit, query=query)
 
-    async def get_user_order(self, user_id: int, order_id: int) -> Optional[Order]:
+    async def get_user_order(self, user_id: uuid.UUID, order_id: uuid.UUID) -> Optional[Order]:
         """
         获取用户的特定订单
         
@@ -65,7 +66,7 @@ class OrderRepository(BaseRepository):
 
     async def get_user_orders_by_amount(
             self,
-            user_id: int,
+            user_id: uuid.UUID,
             min_amount: Optional[float] = None,
             max_amount: Optional[float] = None,
             *,

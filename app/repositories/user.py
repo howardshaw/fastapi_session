@@ -1,3 +1,4 @@
+import uuid
 from typing import Optional, Callable
 
 from sqlalchemy import select
@@ -34,6 +35,10 @@ class UserRepository(BaseRepository):
         stmt = select(self.model).filter(self.model.email == email)
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def get_user_by_id(self, id: uuid.UUID) -> Optional[User]:
+        """通过id获取用户"""
+        return await self.read_by_id(id)
 
     async def get_by_username(self, username: str) -> Optional[User]:
         """通过用户名获取用户"""

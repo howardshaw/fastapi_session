@@ -1,5 +1,7 @@
-from sqlalchemy import Column
-from sqlmodel import Field, Relationship, ForeignKey, Integer, Float
+import uuid
+
+from sqlalchemy import Column, CHAR
+from sqlmodel import Field, Relationship, Float
 
 from .base import BaseModel
 
@@ -8,22 +10,16 @@ class Account(BaseModel, table=True):
     """账户模型"""
     __tablename__ = "accounts"
 
-    user_id: int = Field(
-        sa_column=Column(
-            Integer,
-            ForeignKey("users.id", ondelete="CASCADE"),
-            unique=True,
-            nullable=False,
-            comment="User ID"
-        )
+    user_id: uuid.UUID = Field(
+        sa_type=CHAR(36),
+        nullable=False,
+        foreign_key="users.id",
+        description="所有者ID"
     )
+
     balance: float = Field(
-        sa_column=Column(
-            Float,
-            nullable=False,
-            default=0.0,
-            comment="Account balance"
-        )
+        default=0.0,
+        sa_column=Column(Float, comment="账户余额")
     )
 
     # Relationships

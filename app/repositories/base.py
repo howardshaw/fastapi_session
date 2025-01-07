@@ -1,3 +1,4 @@
+import uuid
 from typing import TypeVar, Type, Any, Callable
 
 from sqlalchemy import select, func, update as sqlalchemy_update
@@ -26,6 +27,18 @@ class BaseRepository:
         if isinstance(self._session_or_factory, AsyncSession):
             return self._session_or_factory
         return self._session_or_factory()
+    
+    def filter(self, **kwargs):
+        """
+        创建基础查询过滤器
+        
+        Args:
+            **kwargs: 过滤条件
+            
+        Returns:
+            过滤后的查询对象
+        """
+        return select(self.model).filter_by(**kwargs)
 
     async def read_by_options(self, schema: T, eager: bool = False) -> dict:
         schema_as_dict: dict = schema.dict(exclude_none=True)
@@ -66,8 +79,8 @@ class BaseRepository:
             },
         }
 
-    async def read_by_id(self, id: int, eager: bool = False):
-        stmt = select(self.model).filter(self.model.id == id)
+    async def read_by_id(self, id: uuid.UUID, eager: bool = False):
+        stmt = select(self.model).filter(self.model.id == str(id))
         if eager:
             for eager_relation in getattr(self.model, "eagers", []):
                 stmt = stmt.options(joinedload(getattr(self.model, eager_relation)))
@@ -88,8 +101,8 @@ class BaseRepository:
             raise DuplicatedError(detail=str(e.orig))
         return instance
 
-    async def update(self, id: int, schema: T):
-        stmt = select(self.model).filter(self.model.id == id)
+    async def update(self, id: uuid.UUID, schema: T):
+        stmt = select(self.model).filter(self.model.id == str(id))
         result = await self.session.execute(stmt)
         instance = result.scalars().first()
         if not instance:
@@ -105,8 +118,8 @@ class BaseRepository:
         await self.session.flush()
         return await self.read_by_id(id)
 
-    async def update_attr(self, id: int, column: str, value: Any):
-        stmt = select(self.model).filter(self.model.id == id)
+    async def update_attr(self, id: uuid.UUID, column: str, value: Any):
+        stmt = select(self.model).filter(self.model.id == str(id))
         result = await self.session.execute(stmt)
         instance = result.scalars().first()
         if not instance:
@@ -120,12 +133,12 @@ class BaseRepository:
         await self.session.flush()
         return await self.read_by_id(id)
 
-    async def whole_update(self, id: int, schema: T):
-        stmt = select(self.model).filter(self.model.id == id)
+    async def whole_update(self, id: uuid.UUID, schema: T):
+        stmt = select(self.model).filter(self.model.id == str(id))
         result = await self.session.execute(stmt)
         instance = result.scalars().first()
         if not instance:
-            raise NotFoundError(detail=f"not found id : {id}")
+            raise NotFoundError(detail=f"not found id : {str(id)}")
         update_stmt = (
             sqlalchemy_update(self.model)
             .where(self.model.id == id)
@@ -135,12 +148,37 @@ class BaseRepository:
         await self.session.flush()
         return await self.read_by_id(id)
 
-    async def delete_by_id(self, id: int):
-        stmt = select(self.model).filter(self.model.id == id)
+    async def delete_by_id(self, id: uuid.UUID):
+        stmt = select(self.model).filter(self.model.id == str(id))
         result = await self.session.execute(stmt)
         instance = result.scalars().first()
         if not instance:
-            raise NotFoundError(detail=f"not found id : {id}")
+            raise NotFoundError(detail=f"not found id : {str(id)}")
         await self.session.delete(instance)
         await self.session.flush()
         return instance
+
+    async def get_multi(
+        self,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        query = None
+    ) -> list[T]:
+        """
+        获取多条记录，支持分页
+        
+        Args:
+            skip: 跳过记录数
+            limit: 返回记录数限制
+            query: 可选的查询对象，如果为None则查询所有记录
+            
+        Returns:
+            记录列表
+        """
+        if query is None:
+            query = select(self.model)
+            
+        query = query.offset(skip).limit(limit)
+        result = await self.session.execute(query)
+        return result.scalars().all()
