@@ -1,4 +1,5 @@
 import uuid
+from typing import List
 
 from sqlmodel import Field, Relationship, Column, String, CHAR
 
@@ -31,3 +32,4 @@ class Workspace(BaseModel, table=True):
 
     # Relationships
     user: "User" = Relationship()
+    datasets: List["Dataset"] = Relationship(back_populates="workspace")

@@ -2,7 +2,7 @@ import uuid
 from enum import Enum
 from typing import TYPE_CHECKING, Dict
 
-from sqlmodel import Field, Relationship, Column, String, Integer, CHAR, JSON
+from sqlmodel import Field, Relationship, Column, String, Integer, CHAR, JSON, UniqueConstraint
 
 from .base import BaseModel
 
@@ -30,6 +30,8 @@ class ResourceType(str, Enum):
 class Resource(BaseModel, table=True):
     """资源模型"""
     __tablename__ = "resources"
+
+    __table_args__ = (UniqueConstraint("name", "workspace_id"),)
 
     name: str = Field(
         sa_column=Column(String(256), nullable=False, index=True, comment="资源名称")

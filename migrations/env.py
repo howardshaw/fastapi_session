@@ -27,7 +27,7 @@ from app.models import *
 
 
 def get_all_models():
-    return [User, Account, Order, Workspace, Resource]
+    return [User, Account, Order, Workspace, Resource, Dataset]
 
 
 # target_metadata = mymodel.Base.metadata

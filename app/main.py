@@ -30,6 +30,7 @@ from app.routers import (
     dsl,
     workspace,
     resource,
+    dataset,
     monitoring,
     auth
 )
@@ -154,6 +155,7 @@ def _register_routers(app: FastAPI) -> None:
     app.include_router(dsl.router)
     app.include_router(workspace.router)
     app.include_router(resource.router)
+    app.include_router(dataset.router)
     app.include_router(monitoring.router)
     app.include_router(auth.router)
 

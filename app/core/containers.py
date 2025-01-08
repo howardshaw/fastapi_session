@@ -8,6 +8,7 @@ from app.core.clients import TemporalClientFactory
 from app.core.database import Database
 from app.repositories import UserRepository, OrderRepository
 from app.repositories.account import AccountRepository
+from app.repositories.dataset import DatasetRepository
 from app.repositories.resource import ResourceRepository
 from app.repositories.workspace import WorkspaceRepository
 from app.services import (
@@ -17,6 +18,7 @@ from app.services import (
     WorkspaceService,
 )
 from app.services.auth import AuthService
+from app.services.dataset import DatasetService
 from app.services.resource import ResourceService
 from app.services.storage.minio_storage import MinioStorageService
 from app.settings import get_settings
@@ -42,6 +44,7 @@ class Container(containers.DeclarativeContainer):
             "app.routers.dsl",
             "app.routers.resource",
             "app.routers.workspace",
+            "app.routers.dataset",
             "app.services.auth",
             "app.workflows.transfer.worker",
             "app.workflows.translate.worker",
@@ -112,6 +115,11 @@ class Container(containers.DeclarativeContainer):
         session_or_factory=db.provided.get_session,
     )
 
+    dataset_repository = providers.Singleton(
+        DatasetRepository,
+        session_or_factory=db.provided.get_session
+    )
+
     # Auth dependencies
     auth_service = providers.Factory(
         AuthService,
@@ -147,6 +155,13 @@ class Container(containers.DeclarativeContainer):
         db=db.provided,
         storage_service=storage_service,
         resource_repository=resource_repository
+    )
+
+    dataset_service = providers.Singleton(
+        DatasetService,
+        db=db.provided,
+        dataset_repository=dataset_repository,
+        workspace_repository=workspace_repository
     )
 
     # Activities
