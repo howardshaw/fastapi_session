@@ -1,8 +1,8 @@
-from datetime import datetime
 import uuid
+from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class WorkspaceBase(BaseModel):
@@ -24,22 +24,20 @@ class WorkspaceUpdate(BaseModel):
 
 class WorkspaceResponse(WorkspaceBase):
     """工作空间响应模型"""
+
+    model_config = ConfigDict(from_attributes=True)
+
     id: uuid.UUID
     user_id: uuid.UUID
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        orm_mode = True
-
 
 class WorkspaceListResponse(BaseModel):
     """工作空间列表响应模型"""
+    model_config = ConfigDict(from_attributes=True)
+
     items: list[WorkspaceResponse]
     total: int
     skip: int
     limit: int
-
-    class Config:
-        orm_mode = True
-

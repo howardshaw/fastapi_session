@@ -67,7 +67,7 @@ async def get_workspaces(
     total = await workspace_service.count_user_workspaces(current_user.id)
     
     # 将每个 workspace 转换为 WorkspaceResponse
-    workspace_responses = [WorkspaceResponse.model_validate(workspace.model_dump()) for workspace in workspaces]
+    workspace_responses = [WorkspaceResponse.model_validate(workspace) for workspace in workspaces]
     
     return WorkspaceListResponse(
         items=workspace_responses,

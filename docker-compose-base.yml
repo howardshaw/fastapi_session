@@ -155,10 +155,69 @@ services:
     networks:
       - temporal-network
 
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BROWSER_REDIRECT_URL: http://localhost:9001  # MinIO Console 访问地址
+    command: server --console-address ":9001" /data
+    ports:
+      - "9000:9000"  # MinIO API 端口
+      - "9001:9001"  # MinIO Console 端口
+    volumes:
+      - minio_data:/data
+    networks:
+      - temporal-network
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # MinIO 创建默认 bucket 的初始化容器
+  createbuckets:
+    image: minio/mc
+    container_name: minio-createbuckets
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minio-access-key}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minio-secret-key}
+    volumes:
+      - ./config/minio/policy.json:/tmp/policy.json
+    entrypoint: |
+      /bin/sh -c '
+        /usr/bin/mc config host add myminio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
+        
+        # 检查并创建 bucket
+        /usr/bin/mc ls myminio/resources > /dev/null 2>&1 || /usr/bin/mc mb myminio/resources &&
+        
+        /usr/bin/mc anonymous set public myminio/resources &&
+
+        # 检查并创建用户
+        /usr/bin/mc admin user info myminio $${MINIO_ACCESS_KEY} > /dev/null 2>&1 || 
+        /usr/bin/mc admin user add myminio $${MINIO_ACCESS_KEY} $${MINIO_SECRET_KEY} &&
+        
+        # 删除已存在的策略（如果存在），忽略可能的错误
+        /usr/bin/mc admin policy remove myminio resources-policy 2>/dev/null || true &&
+        
+        # 创建新策略
+        /usr/bin/mc admin policy create myminio resources-policy /tmp/policy.json &&
+        /usr/bin/mc admin policy attach myminio resources-policy --user $${MINIO_ACCESS_KEY}
+      '
+    networks:
+      - temporal-network
+
 volumes:
   redis_data:
   mysql_data:
   opensearch_data:
+  minio_data:
 
 networks:
   temporal-network:

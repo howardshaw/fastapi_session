@@ -54,3 +54,4 @@ langchain_experimental>=0.3.4
 langchain_neo4j>=0.2.0
 termcolor>=2.5.0
 python-multipart>=0.0.20
+minio>=7.2.14

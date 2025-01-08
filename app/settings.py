@@ -65,6 +65,12 @@ class Settings(BaseSettings):
     TEMPORAL_TRANSLATE_QUEUE: str = "translate-task-queue"
     TEMPORAL_DSL_QUEUE: str = "dsl-task-queue"
 
+    MINIO_ENDPOINT: str = "localhost:9000"
+    MINIO_ACCESS_KEY: str = "minio-access-key"
+    MINIO_SECRET_KEY: str = "minio-secret-key"
+    MINIO_BUCKET: str = "resources"
+    MINIO_SECURE: bool = False
+    
     # DATABASE
     DB_USER: str = ""
     DB_PASSWORD: str = ""

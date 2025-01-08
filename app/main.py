@@ -21,6 +21,7 @@ from app.core.observability.tracings import (
     instrument_threads
 )
 from app.logger.logger import get_logger, setup_logging
+from app.middlewares.auth import AuthMiddleware
 from app.routers import (
     users,
     transactions,
@@ -28,11 +29,11 @@ from app.routers import (
     transform,
     dsl,
     workspace,
+    resource,
     monitoring,
     auth
 )
 from app.settings import settings
-from app.middlewares.auth import AuthMiddleware
 
 # 初始化日志
 setup_logging(settings=settings)
@@ -102,7 +103,7 @@ def create_app() -> FastAPI:
     app = FastAPI(lifespan=lifespan)
 
     container = Container()
-    
+
     # CORS 配置
     app.add_middleware(
         CORSMiddleware,
@@ -152,6 +153,7 @@ def _register_routers(app: FastAPI) -> None:
     app.include_router(transform.router)
     app.include_router(dsl.router)
     app.include_router(workspace.router)
+    app.include_router(resource.router)
     app.include_router(monitoring.router)
     app.include_router(auth.router)
 

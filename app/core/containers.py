@@ -8,6 +8,7 @@ from app.core.clients import TemporalClientFactory
 from app.core.database import Database
 from app.repositories import UserRepository, OrderRepository
 from app.repositories.account import AccountRepository
+from app.repositories.resource import ResourceRepository
 from app.repositories.workspace import WorkspaceRepository
 from app.services import (
     UserService,
@@ -16,6 +17,8 @@ from app.services import (
     WorkspaceService,
 )
 from app.services.auth import AuthService
+from app.services.resource import ResourceService
+from app.services.storage.minio_storage import MinioStorageService
 from app.settings import get_settings
 from app.workflows.dsl.activities import DSLActivities
 from app.workflows.transfer.activities import AccountActivities
@@ -37,6 +40,7 @@ class Container(containers.DeclarativeContainer):
             "app.routers.translate",
             "app.routers.transform",
             "app.routers.dsl",
+            "app.routers.resource",
             "app.routers.workspace",
             "app.services.auth",
             "app.workflows.transfer.worker",
@@ -103,6 +107,10 @@ class Container(containers.DeclarativeContainer):
         user_repository=user_repository,
         account_repository=account_repository,
     )
+    resource_repository = providers.Factory(
+        ResourceRepository,
+        session_or_factory=db.provided.get_session,
+    )
 
     # Auth dependencies
     auth_service = providers.Factory(
@@ -127,6 +135,18 @@ class Container(containers.DeclarativeContainer):
         WorkspaceService,
         db=db.provided,
         workspace_repository=workspace_repository,
+    )
+
+    storage_service = providers.Factory(
+        MinioStorageService,
+        settings=settings,
+    )
+
+    resource_service = providers.Factory(
+        ResourceService,
+        db=db.provided,
+        storage_service=storage_service,
+        resource_repository=resource_repository
     )
 
     # Activities
