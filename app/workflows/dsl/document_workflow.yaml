@@ -1,0 +1,66 @@
+variables:
+  resource_id: "0194434a-70cc-78d0-b960-1157ce9c02d3"
+  collection_name: "dataset"
+  faq_collection_name: "dataset_faq"
+  summary_collection_name: "dataset_summary"
+  chunk_size: 1000
+
+root:
+  sequence:
+    elements:
+      # 获取资源
+      - activity:
+          name: load_document
+          arguments: [ "resource_id" ]
+          result: documents
+
+      # 清理内容
+      - activity:
+          name: clean_content
+          arguments: [ "documents" ]
+          result: cleaned_documents
+
+      # 切分文档
+      - activity:
+          name: split_documents
+          arguments: [ "cleaned_documents", "chunk_size" ]
+          result: splits
+
+      # 并行
+      - parallel:
+          branches:
+            # 生成FAQ并保存到FAQ collection
+            - sequence:
+                elements:
+                  - activity:
+                      name: store_documents
+                      arguments: []
+                      result: docstore
+                  - parallel:
+                      branches:
+                        - sequence:
+                            elements:
+                              - activity:
+                                  name: hypothetical_question
+                                  arguments: [ "splits" ]
+                                  result: questions
+                              - activity:
+                                  name: store_vectors
+                                  arguments: [ "questions", "faq_collection_name" ]
+                                  result: questions_result
+                        # 生成摘要并保存到摘要collection
+                        - sequence:
+                            elements:
+                              - activity:
+                                  name: generate_summary
+                                  arguments: [ "splits" ]
+                                  result: summary
+                              - activity:
+                                  name: store_vectors
+                                  arguments: [ "summary", "summary_collection_name" ]
+                                  result: summary_result
+            # 存储chunk原文到向量库
+            - activity:
+                name: store_vectors
+                arguments: [ "splits", "collection_name" ]
+                result: vectors_result

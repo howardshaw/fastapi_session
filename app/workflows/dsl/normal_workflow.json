@@ -1,0 +1,50 @@
+{
+  "variables": {
+    "resource_id": "0194434a-70cc-78d0-b960-1157ce9c02d3",
+    "collection_name": "dataset",
+    "chunk_size": 1000
+  },
+  "root": {
+    "sequence": {
+      "elements": [
+        {
+          "activity": {
+            "name": "load_document",
+            "arguments": [
+              "resource_id"
+            ],
+            "result": "documents"
+          }
+        },
+        {
+          "activity": {
+            "name": "clean_content",
+            "arguments": [
+              "documents"
+            ],
+            "result": "cleaned_documents"
+          }
+        },
+        {
+          "activity": {
+            "name": "split_documents",
+            "arguments": [
+              "cleaned_documents",
+              "chunk_size"
+            ],
+            "result": "splits"
+          }
+        },
+        {
+          "activity": {
+            "name": "store_vectors",
+            "arguments": [
+              "splits",
+              "collection_name"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

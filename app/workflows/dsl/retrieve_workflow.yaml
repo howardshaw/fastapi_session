@@ -1,0 +1,24 @@
+variables:
+  query: "小米"
+  retriever_type: "multi"
+  collection_name: "dataset"
+  faq_collection_name: "dataset_faq"
+  summary_collection_name: "dataset_summary"
+
+
+root:
+  sequence:
+    elements:
+      # 获取资源
+      - activity:
+          name: retrieve_documents
+          arguments: [ "query", "faq_collection_name", "retriever_type" ]
+          result: faq_documents
+      - activity:
+          name: retrieve_documents
+          arguments: [ "query", "summary_collection_name", "retriever_type" ]
+          result: summary_documents
+      - activity:
+          name: retrieve_documents
+          arguments: [ "query", "collection_name" ]
+          result: chunk_documents
