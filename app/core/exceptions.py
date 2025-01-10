@@ -107,6 +107,12 @@ class InternalError(HTTPException):
     def __init__(self, detail: Any = None, headers: Optional[Dict[str, Any]] = None) -> None:
         super().__init__(status.HTTP_500_INTERNAL_SERVER_ERROR, detail, headers)
 
+# 在其他异常类定义后添加
+class UnauthorizedError(HTTPException):
+    def __init__(self, detail: Any = None, headers: Optional[Dict[str, Any]] = None) -> None:
+        if headers is None:
+            headers = {"WWW-Authenticate": "Bearer"}
+        super().__init__(status.HTTP_401_UNAUTHORIZED, detail or "Could not validate credentials", headers)
 
 # Exception Handlers
 def create_exception_handler(exc_class: Type[AppException]) -> Callable:
@@ -186,10 +192,13 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
 
 def register_exception_handlers(app: Any) -> None:
     """Register all exception handlers to the FastAPI app"""
-    # Register custom exception handlers
+    logger.info("Registering exception handlers")
+    # 1. 注册具体的应用异常处理器
     for exc_class in AppException.__subclasses__():
         app.add_exception_handler(exc_class, create_exception_handler(exc_class))
-
-    # Register default exception handlers
-    app.add_exception_handler(Exception, default_exception_handler)
+    
+    # 2. 注册 HTTP 异常处理器
     app.add_exception_handler(HTTPException, http_exception_handler)
+    
+    # 3. 最后注册最通用的异常处理器
+    app.add_exception_handler(Exception, default_exception_handler)

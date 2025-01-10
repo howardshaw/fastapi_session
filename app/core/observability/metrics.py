@@ -16,26 +16,26 @@ def setup_telemetry_metrics(settings: Settings) -> None:
         "gzip": grpc.Compression.Gzip,
         "deflate": grpc.Compression.Deflate,
         "none": grpc.Compression.NoCompression,
-    }[settings.COMPRESSION]
+    }[settings.API.COMPRESSION]
 
     metric_exporter = OTLPMetricExporter(
-        endpoint=settings.OTLP_ENDPOINT,
-        insecure=True,
+        endpoint=settings.OTLP.ENDPOINT,
+        insecure=settings.OTLP.INSECURE,
         compression=compression,
     )
     metric_readers = [
         PeriodicExportingMetricReader(
             exporter=metric_exporter,
-            export_interval_millis=settings.EXPORT_INTERVAL_MILLIS,
-            export_timeout_millis=settings.EXPORT_TIMEOUT_MILLIS,
+            export_interval_millis=settings.OTLP.EXPORT_INTERVAL_MILLIS,
+            export_timeout_millis=settings.OTLP.EXPORT_TIMEOUT_MILLIS,
         )
     ]
-    if settings.METRICS_CONSOLE:
+    if settings.API.METRICS_CONSOLE:
         metric_readers.append(
             PeriodicExportingMetricReader(
                 exporter=ConsoleMetricExporter(),
-                export_interval_millis=settings.EXPORT_INTERVAL_MILLIS,
-                export_timeout_millis=settings.EXPORT_TIMEOUT_MILLIS,
+                export_interval_millis=settings.OTLP.EXPORT_INTERVAL_MILLIS,
+                export_timeout_millis=settings.OTLP.EXPORT_TIMEOUT_MILLIS,
             )
         )
     metrics_provider = MeterProvider(metric_readers=metric_readers)

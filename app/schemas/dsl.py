@@ -35,7 +35,7 @@ class RootDefinition(BaseModel):
 
 class DSLRequest(BaseModel):
     """工作流 DSL 请求"""
-    variables: Dict[str, str] = Field(
+    variables: Dict[str, Any] = Field(
         default_factory=dict,
         description="工作流变量定义",
         examples=[{"arg1": "value1", "arg2": "value2"}]
@@ -44,30 +44,53 @@ class DSLRequest(BaseModel):
         ...,
         description="工作流根节点定义",
         examples=[{
-            "sequence": {
-                "elements": [
-                    {
-                        "activity": {
-                            "name": "activity1",
-                            "arguments": ["arg1"],
-                            "result": "result1"
+            "variables": {
+                "resource_id": "0194434a-70cc-78d0-b960-1157ce9c02d3",
+                "collection_name": "dataset",
+                "chunk_size": 1000
+            },
+            "root": {
+                "sequence": {
+                    "elements": [
+                        {
+                            "activity": {
+                                "name": "load_document",
+                                "arguments": [
+                                    "resource_id"
+                                ],
+                                "result": "documents"
+                            }
+                        },
+                        {
+                            "activity": {
+                                "name": "clean_content",
+                                "arguments": [
+                                    "documents"
+                                ],
+                                "result": "cleaned_documents"
+                            }
+                        },
+                        {
+                            "activity": {
+                                "name": "split_documents",
+                                "arguments": [
+                                    "cleaned_documents",
+                                    "chunk_size"
+                                ],
+                                "result": "splits"
+                            }
+                        },
+                        {
+                            "activity": {
+                                "name": "store_vectors",
+                                "arguments": [
+                                    "splits",
+                                    "collection_name"
+                                ]
+                            }
                         }
-                    },
-                    {
-                        "activity": {
-                            "name": "activity2",
-                            "arguments": ["result1"],
-                            "result": "result2"
-                        }
-                    },
-                    {
-                        "activity": {
-                            "name": "activity3",
-                            "arguments": ["arg2", "result2"],
-                            "result": "result3"
-                        }
-                    }
-                ]
+                    ]
+                }
             }
         }]
     )
@@ -82,7 +105,7 @@ class DSLRequest(BaseModel):
                 activity=ActivityInvocation(
                     name=act_def["name"],
                     arguments=act_def["arguments"],
-                    result=act_def["result"]
+                    result=act_def.get("result", ""),
                 )
             )
 
@@ -93,6 +116,8 @@ class DSLRequest(BaseModel):
                     elements.append(convert_activity(elem["activity"]))
                 elif "parallel" in elem:
                     elements.append(convert_parallel(elem["parallel"]))
+                elif "sequence" in elem:
+                    elements.append(convert_sequence(elem["sequence"]))
             return SequenceStatement(sequence=Sequence(elements=elements))
 
         def convert_parallel(par_def: Dict[str, Any]) -> ParallelStatement:
@@ -100,6 +125,11 @@ class DSLRequest(BaseModel):
             for branch in par_def["branches"]:
                 if "sequence" in branch:
                     branches.append(convert_sequence(branch["sequence"]))
+                elif "activity" in branch:
+                    branches.append(convert_activity(branch["activity"]))
+                elif "parallel" in branch:
+                    branches.append(convert_parallel(branch["parallel"]))
+
             return ParallelStatement(parallel=Parallel(branches=branches))
 
         # 转换根节点
@@ -114,31 +144,48 @@ class DSLRequest(BaseModel):
         "json_schema_extra": {
             "example": {
                 "variables": {
-                    "arg1": "value1",
-                    "arg2": "value2"
+                    "resource_id": "0194434a-70cc-78d0-b960-1157ce9c02d3",
+                    "collection_name": "dataset",
+                    "chunk_size": 1000
                 },
                 "root": {
                     "sequence": {
                         "elements": [
                             {
                                 "activity": {
-                                    "name": "activity1",
-                                    "arguments": ["arg1"],
-                                    "result": "result1"
+                                    "name": "load_document",
+                                    "arguments": [
+                                        "resource_id"
+                                    ],
+                                    "result": "documents"
                                 }
                             },
                             {
                                 "activity": {
-                                    "name": "activity2",
-                                    "arguments": ["result1"],
-                                    "result": "result2"
+                                    "name": "clean_content",
+                                    "arguments": [
+                                        "documents"
+                                    ],
+                                    "result": "cleaned_documents"
                                 }
                             },
                             {
                                 "activity": {
-                                    "name": "activity3",
-                                    "arguments": ["arg2", "result2"],
-                                    "result": "result3"
+                                    "name": "split_documents",
+                                    "arguments": [
+                                        "cleaned_documents",
+                                        "chunk_size"
+                                    ],
+                                    "result": "splits"
+                                }
+                            },
+                            {
+                                "activity": {
+                                    "name": "store_vectors",
+                                    "arguments": [
+                                        "splits",
+                                        "collection_name"
+                                    ]
                                 }
                             }
                         ]
@@ -150,4 +197,4 @@ class DSLRequest(BaseModel):
 
 
 # 需要在类定义后更新 Forward References
-SequenceDefinition.model_rebuild()
+# SequenceDefinition.model_rebuild()

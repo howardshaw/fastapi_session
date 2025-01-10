@@ -1,3 +1,4 @@
+import uuid
 from typing import Dict, Any
 
 from sqlalchemy import select
@@ -20,12 +21,12 @@ class TransactionService:
     def session(self) -> AsyncSession:
         return self.db.get_session()
 
-    async def get_account_by_id(self, account_id: int) -> Account | None:
+    async def get_account_by_id(self, account_id: uuid.UUID) -> Account | None:
         """Get account by ID"""
         try:
             logger.info(f"get account by id: {account_id} {self.session}")
             result = await self.session.execute(
-                select(Account).filter(Account.id == account_id)
+                select(Account).filter(Account.id == str(account_id))
             )
             account = result.scalar_one_or_none()
             if not account:
@@ -35,9 +36,9 @@ class TransactionService:
             logger.error(f"Database error while getting account: {str(e)}")
             raise DatabaseError(f"Failed to get account {account_id}")
 
-    async def get_account_by_user_id(self, user_id: int):
+    async def get_account_by_user_id(self, user_id: uuid.UUID) -> Account | None:
         """Read-only operation to get account by user ID"""
-        query = select(Account).where(Account.user_id == user_id)
+        query = select(Account).where(Account.user_id == str(user_id))
         result = await self.session.execute(query)
         return result.scalar_one_or_none()
 
@@ -61,7 +62,7 @@ class TransactionService:
         await self.session.refresh(account)
         return account
 
-    async def withdraw(self, account_id: int, amount: float) -> Account:
+    async def withdraw(self, account_id: uuid.UUID, amount: float) -> Account:
         """Withdraw money from an account"""
         try:
             async with self.db.transaction():
@@ -71,7 +72,7 @@ class TransactionService:
             logger.error(f"Database error during withdrawal: {str(e)}")
             raise DatabaseError(f"Failed to process withdrawal for account {account_id}")
 
-    async def deposit(self, account_id: int, amount: float) -> Account:
+    async def deposit(self, account_id: uuid.UUID, amount: float) -> Account:
         """Deposit money to an account"""
         try:
             async with self.db.transaction():
@@ -81,7 +82,7 @@ class TransactionService:
             logger.error(f"Database error during deposit: {str(e)}")
             raise DatabaseError(f"Failed to process deposit for account {account_id}")
 
-    async def transfer(self, from_account_id: int, to_account_id: int, amount: float) -> Dict[str, Any]:
+    async def transfer(self, from_account_id: uuid.UUID, to_account_id: uuid.UUID, amount: float) -> Dict[str, Any]:
         """Transfer money between accounts using unit of work pattern"""
 
         async with self.db.transaction():

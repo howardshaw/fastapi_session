@@ -1,3 +1,4 @@
+import uuid
 from datetime import timedelta
 
 from temporalio import workflow
@@ -13,7 +14,7 @@ class TransferWorkflow:
     Transfer workflow implementation
     """
     @workflow.run
-    async def run(self, from_account_id: int, to_account_id: int, amount: float) -> dict:
+    async def run(self, from_account_id: uuid.UUID, to_account_id: uuid.UUID, amount: float) -> dict:
         """
         Execute transfer between accounts
         

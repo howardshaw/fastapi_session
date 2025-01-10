@@ -1,9 +1,9 @@
-from typing import BinaryIO, Optional, Dict
+from typing import BinaryIO, Optional, Dict, Union
 from datetime import timedelta
 from minio import Minio
 from minio.error import MinioException
 
-from app.settings import Settings
+from app.settings import MinioSettings
 from app.logger import get_logger
 from .base import StorageService
 
@@ -11,14 +11,14 @@ logger = get_logger(__name__)
 
 
 class MinioStorageService(StorageService):
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: MinioSettings):
         self.client = Minio(
-            endpoint=settings.MINIO_ENDPOINT,
-            access_key=settings.MINIO_ACCESS_KEY,
-            secret_key=settings.MINIO_SECRET_KEY,
-            secure=settings.MINIO_SECURE
+            endpoint=settings.ENDPOINT,
+            access_key=settings.ACCESS_KEY,
+            secret_key=settings.SECRET_KEY,
+            secure=settings.SECURE
         )
-        self.bucket = settings.MINIO_BUCKET
+        self.bucket = settings.BUCKET
         self._ensure_bucket()
 
     def _ensure_bucket(self):
@@ -74,4 +74,11 @@ class MinioStorageService(StorageService):
             )
         except MinioException as e:
             logger.error(f"Failed to get file url: {e}")
+            raise 
+
+    async def download(self, source_path: str, dest_path: str) -> None:
+        try:
+            return self.client.fget_object(self.bucket, source_path, dest_path)
+        except MinioException as e:
+            logger.error(f"Failed to get file content: {e}")
             raise 

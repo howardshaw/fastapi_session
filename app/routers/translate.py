@@ -11,7 +11,7 @@ from app.core.containers import Container
 from app.core.queue_manager import QueueManager
 from app.logger.logger import get_logger
 from app.schemas.translate import TranslateRequest
-from app.settings import Settings
+from app.settings import TemporalSettings
 from app.workflows.translate.activities import TranslateParams
 from app.workflows.translate.workflows import TranslateWorkflow
 
@@ -30,7 +30,7 @@ async def translate(
         translate_request: TranslateRequest,
         client: Client = Depends(Provide[Container.temporal_client]),
         redis_client: redis.Redis = Depends(Provide[Container.redis_client]),
-        settings: Settings = Depends(Provide[Container.settings]),
+        settings: TemporalSettings = Depends(Provide[Container.settings.provided.TEMPORAL]),
 ):
     logger.info(f"translate request: {translate_request}")
     async def event_generator():
@@ -41,7 +41,7 @@ async def translate(
                 TranslateWorkflow.run,
                 args=[TranslateParams(translate_request.phase, translate_request.language), task_id],
                 id=task_id,
-                task_queue=settings.TEMPORAL_TRANSLATE_QUEUE,
+                task_queue=settings.TRANSLATE_QUEUE,
             )
 
             async for message in queue_manager.listen():

@@ -54,3 +54,17 @@ class StorageService(ABC):
             str: 文件访问URL
         """
         pass
+
+    @abstractmethod
+    async def download(self, source_path: str, dest_path: str) -> None:
+        """
+        获取文件内容
+        
+        Args:
+            source_path: 文件路径
+            dest_path: 下载路径
+            
+        Returns:
+
+        """
+        pass

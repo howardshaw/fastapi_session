@@ -7,7 +7,7 @@ from temporalio.client import Client
 from app.core.containers import Container
 from app.logger.logger import get_logger
 from app.schemas.dsl import DSLRequest
-from app.settings import Settings
+from app.settings import TemporalSettings
 from app.workflows.dsl.workflows import DSLWorkflow
 
 router = APIRouter(
@@ -23,7 +23,7 @@ logger = get_logger(__name__)
 async def create_dsl_workflow(
         dsl_request: DSLRequest,
         client: Client = Depends(Provide[Container.temporal_client]),
-        settings: Settings = Depends(Provide[Container.settings]),
+        settings: TemporalSettings = Depends(Provide[Container.settings.provided.TEMPORAL]),
 ):
     """创建并执行 DSL 工作流"""
     workflow_id = str(uuid.uuid4())
@@ -36,7 +36,7 @@ async def create_dsl_workflow(
         DSLWorkflow.run,
         dsl_input,
         id=workflow_id,
-        task_queue=settings.TEMPORAL_DSL_QUEUE,
+        task_queue=settings.DSL_QUEUE,
     )
 
     return {"workflow_id": workflow_id, "result": result}

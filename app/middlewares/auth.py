@@ -1,10 +1,10 @@
 from typing import Optional
 
-from fastapi import Request, HTTPException
+from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
 
-from app.core.containers import Container
+from app.core.exceptions import UnauthorizedError
 from app.services.auth import AuthService
 
 
@@ -32,10 +32,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
         try:
             await self.auth_service.get_current_user_from_request(request)
         except Exception as e:
-            raise HTTPException(
-                status_code=401,
-                detail="Could not validate credentials",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+            raise UnauthorizedError()
 
         return await call_next(request) 

@@ -1,16 +1,16 @@
-import logging
-
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from temporalio.client import Client
-from temporalio.contrib.opentelemetry import TracingInterceptor
+from temporalio.client import Client, TLSConfig
 from temporalio.runtime import OpenTelemetryConfig, Runtime, TelemetryConfig
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-logger = logging.getLogger(__name__)
+from app.logger import get_logger
+from app.workflows.runner.converter import pydantic_data_converter
+
+logger = get_logger(__name__)
 
 
 def init_runtime_with_telemetry(otlp_endpoint: str) -> Runtime:
@@ -37,7 +37,7 @@ class TemporalClientFactory:
         wait=wait_exponential(multiplier=1, min=4, max=10),
         reraise=True
     )
-    async def create(url: str, otlp_endpoint: str) -> Client:
+    async def create(url: str, otlp_endpoint: str = None) -> Client:
         """
         Create and configure a Temporal Client instance
         
@@ -50,12 +50,14 @@ class TemporalClientFactory:
 
             client = await Client.connect(
                 url,
-                # Use OpenTelemetry interceptor
-                interceptors=[TracingInterceptor()],
-                runtime=runtime,
+                tls=TLSConfig(client_cert=None) if url.startswith("https") else None,
+                data_converter=pydantic_data_converter,
             )
         else:
-            client = await Client.connect(url)
+            client = await Client.connect(
+                url,
+                data_converter=pydantic_data_converter,
+            )
 
         logger.info("Successfully connected to Temporal")
         return client

@@ -1,5 +1,4 @@
 import asyncio
-import sys
 
 from dependency_injector.wiring import inject, Provide
 from temporalio.client import Client
@@ -7,52 +6,74 @@ from temporalio.worker import Worker
 
 from app.core.containers import Container
 from app.logger import get_logger, setup_logging
-from app.settings import Settings
-from app.workflows.dsl.activities import DSLActivities
+from app.settings import TemporalSettings
+from app.workflows.dsl.activities import (
+    LoadDocumentActivity,
+    CleanContentActivity,
+    SplitDocumentsActivity,
+    StoreDocumentsActivity,
+    HypotheticalQuestionActivity,
+    GenerateSummaryActivity,
+    VectorStoreActivity,
+    RetrieveActivity,
+)
 from app.workflows.dsl.workflows import DSLWorkflow
+from app.workflows.runner.sandbox import new_sandbox_runner
 
 logger = get_logger(__name__)
 
 
 @inject
 async def create_worker(
-        settings: Settings = Provide[Container.settings],
+        settings: TemporalSettings = Provide[Container.settings.provided.TEMPORAL],
         client: Client = Provide[Container.temporal_client],
-        activities: DSLActivities = Provide[Container.dsl_activities]
+        load_document_activity: LoadDocumentActivity = Provide[Container.load_document_activity],
+        clean_content_activity: CleanContentActivity = Provide[Container.clean_content_activity],
+        split_documents_activity: SplitDocumentsActivity = Provide[Container.split_documents_activity],
+        store_documents_activity: StoreDocumentsActivity = Provide[Container.store_documents_activity],
+        hypothetical_question_activity: HypotheticalQuestionActivity = Provide[
+            Container.hypothetical_question_activity],
+        generate_summary_activity: GenerateSummaryActivity = Provide[Container.generate_summary_activity],
+        vector_store_activity: VectorStoreActivity = Provide[Container.vector_store_activity],
+        retrieve_activity: RetrieveActivity = Provide[Container.retrieve_activity],
 ) -> Worker:
     """Create and configure a Temporal worker"""
-    # Register workflow and activities
-
     return Worker(
         client,
-        task_queue=settings.TEMPORAL_DSL_QUEUE,
+        task_queue=settings.DSL_QUEUE,
         activities=[
-            activities.activity1,
-            activities.activity2,
-            activities.activity3,
-            activities.activity4,
-            activities.activity5,
+            load_document_activity.run,
+            clean_content_activity.run,
+            split_documents_activity.run,
+            store_documents_activity.run,
+            hypothetical_question_activity.run,
+            generate_summary_activity.run,
+            vector_store_activity.run,
+            retrieve_activity.run,
         ],
         workflows=[DSLWorkflow],
+        max_cached_workflows=1000,
+        max_concurrent_workflow_tasks=100,
+        max_concurrent_activities=100,
+        max_concurrent_local_activities=100,
+        max_concurrent_workflow_task_polls=10,
+        max_concurrent_activity_task_polls=10,
+        workflow_runner=new_sandbox_runner(),
     )
 
 
 async def main():
     """Worker entry point"""
-    try:
-        container = Container()
-        container.wire(modules=[__name__])
-        settings = container.settings()
-        setup_logging(settings)
 
-        logger.info("Starting worker...")
-        async with await create_worker() as worker:
-            logger.info(f"Worker started on queue: {worker.task_queue}")
-            await asyncio.Event().wait()
+    container = Container()
+    container.wire(modules=[__name__])
+    settings = container.settings()
+    setup_logging(settings)
 
-    except Exception as e:
-        logger.error("Failed to start worker", exc_info=True)
-        sys.exit(1)
+    logger.info("Starting worker...")
+    async with await create_worker() as worker:
+        logger.info(f"Worker started on queue: {worker.task_queue}")
+        await asyncio.Event().wait()
 
 
 if __name__ == "__main__":

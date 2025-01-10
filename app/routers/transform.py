@@ -8,7 +8,7 @@ from temporalio.exceptions import TemporalError
 from app.core.containers import Container
 from app.logger import get_logger
 from app.schemas.transfer import TransferRequest, TransferResponse
-from app.settings import Settings
+from app.settings import TemporalSettings
 from app.workflows.transfer.workflows import TransferWorkflow
 
 logger = get_logger(__name__)
@@ -24,7 +24,7 @@ router = APIRouter(
 async def transfer(
         transfer_request: TransferRequest,
         client: Client = Depends(Provide[Container.temporal_client]),
-        settings: Settings = Depends(Provide[Container.settings]),
+        settings: TemporalSettings = Depends(Provide[Container.settings.provided.TEMPORAL]),
 ):
     try:
         # Start workflow with correct arguments
@@ -35,7 +35,7 @@ async def transfer(
             TransferWorkflow.run,
             args=[transfer_request.from_account, transfer_request.to_account, transfer_request.amount],
             id=workflow_id,
-            task_queue=settings.TEMPORAL_TRANSFER_QUEUE,
+            task_queue=settings.TRANSFER_QUEUE,
         )
 
         logger.info(f"Transfer initiated: {handle}")

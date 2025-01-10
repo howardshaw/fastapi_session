@@ -8,6 +8,11 @@ from typing import Any, Dict, List, Optional, Union
 
 from temporalio import workflow
 
+with workflow.unsafe.imports_passed_through():
+    from app.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 @dataclass
 class DSLInput:
@@ -67,7 +72,7 @@ class DSLWorkflow:
             result = await workflow.execute_activity(
                 stmt.activity.name,
                 args=[self.variables.get(arg, "") for arg in stmt.activity.arguments],
-                start_to_close_timeout=timedelta(minutes=1),
+                start_to_close_timeout=timedelta(minutes=100),
             )
             if stmt.activity.result:
                 self.variables[stmt.activity.result] = result
@@ -80,6 +85,8 @@ class DSLWorkflow:
             # the first activity fails and will not cancel the others. We could
             # store tasks and cancel if we wanted. In newer Python versions this
             # would use a TaskGroup instead.
+            for branch in stmt.parallel.branches:
+                logger.info(f"parallel branch {branch}")
             await asyncio.gather(
                 *[self.execute_statement(branch) for branch in stmt.parallel.branches]
             )

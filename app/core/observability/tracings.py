@@ -41,8 +41,8 @@ def setup_telemetry_tracing(settings: Settings) -> None:
     try:
         # 设置 TracerProvider
         resource = Resource.create({
-            ResourceAttributes.SERVICE_NAME: settings.API_SERVICE_NAME,
-            ResourceAttributes.DEPLOYMENT_ENVIRONMENT: settings.ENVIRONMENT,
+            ResourceAttributes.SERVICE_NAME: settings.API.SERVICE_NAME,
+            ResourceAttributes.DEPLOYMENT_ENVIRONMENT: settings.API.ENVIRONMENT,
         })
 
         tracer_provider = TracerProvider(resource=resource)
@@ -52,25 +52,25 @@ def setup_telemetry_tracing(settings: Settings) -> None:
             "gzip": grpc.Compression.Gzip,
             "deflate": grpc.Compression.Deflate,
             "none": grpc.Compression.NoCompression,
-        }[settings.COMPRESSION]
+        }[settings.API.COMPRESSION]
         otlp_exporter = OTLPSpanExporter(
-            endpoint=settings.OTLP_ENDPOINT,
-            insecure=settings.OTLP_INSECURE,
+            endpoint=settings.OTLP.ENDPOINT,
+            insecure=settings.OTLP.INSECURE,
             compression=compression,
         )
 
         tracer_provider.add_span_processor(
             BatchSpanProcessor(
                 span_exporter=otlp_exporter,
-                max_queue_size=settings.MAX_QUEUE_SIZE,
-                max_export_batch_size=settings.MAX_EXPORT_BATCH_SIZE,
-                schedule_delay_millis=settings.SCHEDULE_DELAY_MILLIS,
-                export_timeout_millis=settings.EXPORT_TIMEOUT_MILLIS,
+                max_queue_size=settings.OTLP.MAX_QUEUE_SIZE,
+                max_export_batch_size=settings.OTLP.MAX_EXPORT_BATCH_SIZE,
+                schedule_delay_millis=settings.OTLP.SCHEDULE_DELAY_MILLIS,
+                export_timeout_millis=settings.OTLP.EXPORT_TIMEOUT_MILLIS,
             )
         )
         trace.set_tracer_provider(tracer_provider)
         SystemMetricsInstrumentor().instrument()
-        logger.info(f"Telemetry setup completed for service: {settings.API_SERVICE_NAME}")
+        logger.info(f"Telemetry setup completed for service: {settings.API.SERVICE_NAME}")
 
     except Exception as e:
         logger.error(f"Failed to setup telemetry: {e}")

@@ -9,8 +9,8 @@ from app.settings import Settings
 
 def setup_telemetry_logging(settings: Settings) -> None:
     otlp_exporter = OTLPLogExporter(
-        endpoint=settings.OTLP_ENDPOINT,
-        insecure=settings.OTLP_INSECURE,
+        endpoint=settings.OTLP.ENDPOINT,
+        insecure=settings.OTLP.INSECURE,
     )
 
     logger_provider = LoggerProvider()
@@ -18,10 +18,10 @@ def setup_telemetry_logging(settings: Settings) -> None:
 
     logging_handler = LoggingHandler(
         logger_provider=logger_provider,
-        level=settings.LOG_LEVEL,
+        level=settings.LOG.LEVEL,
     )
     logging.getLogger().addHandler(logging_handler)
 
     # 添加到全局 logging 配置
-    logging.basicConfig(level=settings.LOG_LEVEL, handlers=[logging_handler])
+    logging.basicConfig(level=settings.LOG.LEVEL, handlers=[logging_handler])
 

@@ -29,13 +29,13 @@ class AuthService:
         """
         to_encode = data.copy()
         expire = datetime.utcnow() + timedelta(
-            minutes=self.settings.ACCESS_TOKEN_EXPIRE_MINUTES
+            minutes=self.settings.SECURITY.ACCESS_TOKEN_EXPIRE_MINUTES
         )
         to_encode.update({"exp": expire})
         encoded_jwt = jwt.encode(
             to_encode,
-            self.settings.SECRET_KEY,
-            algorithm=self.settings.ALGORITHM
+            self.settings.SECURITY.SECRET_KEY,
+            algorithm=self.settings.SECURITY.ALGORITHM
         )
         return encoded_jwt
 
@@ -58,10 +58,10 @@ class AuthService:
             key="access_token",
             value=f"Bearer {token}",
             httponly=True,
-            max_age=self.settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            expires=self.settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            max_age=self.settings.SECURITY.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            expires=self.settings.SECURITY.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             samesite="lax",
-            secure=self.settings.COOKIE_SECURE,  # True in production
+            secure=self.settings.SECURITY.COOKIE_SECURE,  # True in production
         )
 
     async def get_token_from_request(self, request: Request) -> Optional[str]:
@@ -97,8 +97,8 @@ class AuthService:
         try:
             payload = jwt.decode(
                 token,
-                self.settings.SECRET_KEY,
-                algorithms=[self.settings.ALGORITHM]
+                self.settings.SECURITY.SECRET_KEY,
+                algorithms=[self.settings.SECURITY.ALGORITHM]
             )
             email: str = payload.get("sub")
             if email is None:

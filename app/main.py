@@ -30,6 +30,7 @@ from app.routers import (
     dsl,
     workspace,
     resource,
+    chat,
     dataset,
     monitoring,
     auth
@@ -78,7 +79,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     container = Container()
     app.container = container
     settings = container.settings()
-    logger.info(f"database url: {settings.DATABASE_URL}")
+    logger.info(f"database url: {settings.DATABASE.URL}")
 
     # 初始化可观测性组件
     setup_telemetry_logging(settings)
@@ -86,9 +87,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     setup_telemetry_tracing(settings)
 
     # 初始化数据库
-    db = container.db()
-    await db.init_db()
-    logger.info("Database initialized")
+    # db = container.db()
+    # await db.init_db()
+    # logger.info("Database initialized")
 
     yield
 
@@ -156,6 +157,7 @@ def _register_routers(app: FastAPI) -> None:
     app.include_router(workspace.router)
     app.include_router(resource.router)
     app.include_router(dataset.router)
+    app.include_router(chat.router)
     app.include_router(monitoring.router)
     app.include_router(auth.router)
 

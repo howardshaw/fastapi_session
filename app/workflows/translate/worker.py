@@ -7,7 +7,7 @@ from temporalio.worker import Worker
 
 from app.core.containers import Container
 from app.logger.logger import get_logger,setup_logging
-from app.settings import Settings
+from app.settings import TemporalSettings
 from app.workflows.translate.activities import TranslateActivities
 from app.workflows.translate.workflows import TranslateWorkflow
 
@@ -16,7 +16,7 @@ logger = get_logger(__name__)
 
 @inject
 async def create_worker(
-        settings: Settings = Provide[Container.settings],
+        settings: TemporalSettings = Provide[Container.settings.provided.TEMPORAL],
         client: Client = Provide[Container.temporal_client],
         activities: TranslateActivities = Provide[Container.translate_activities]
 ) -> Worker:
@@ -25,7 +25,7 @@ async def create_worker(
     """
     return Worker(
         client,
-        task_queue=settings.TEMPORAL_TRANSLATE_QUEUE,
+        task_queue=settings.TRANSLATE_QUEUE,
         workflows=[TranslateWorkflow],
         activities=[
             activities.translate_phrase,

@@ -1,3 +1,4 @@
+import uuid
 from dataclasses import dataclass
 
 from temporalio import activity
@@ -29,7 +30,7 @@ class AccountActivities:
         self._transaction_service = transaction_service
 
     @activity.defn
-    async def withdraw_activity(self, account_id: int, amount: float) -> None:
+    async def withdraw_activity(self, account_id: uuid.UUID, amount: float) -> None:
         """Withdraw money from an account"""
         try:
             await self._transaction_service.withdraw(account_id, amount)
@@ -41,7 +42,7 @@ class AccountActivities:
             )
 
     @activity.defn
-    async def deposit_activity(self, account_id: int, amount: float) -> None:
+    async def deposit_activity(self, account_id: uuid.UUID, amount: float) -> None:
         """Deposit money to an account"""
         try:
             await self._transaction_service.deposit(account_id, amount)
@@ -55,8 +56,8 @@ class AccountActivities:
     @activity.defn
     async def transform_activity(
             self,
-            from_account_id: int,
-            to_account_id: int,
+            from_account_id: uuid.UUID,
+            to_account_id: uuid.UUID,
             amount: float
     ) -> None:
         """Transfer money between accounts"""

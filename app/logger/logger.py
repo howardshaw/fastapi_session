@@ -58,22 +58,22 @@ def setup_logging(
             - JSON：结构化 JSON 输出
     """
     # 创建日志目录
-    log_path = Path(settings.LOG_FILE_PATH)
+    log_path = Path(settings.LOG.FILE_PATH)
     log_dir = log_path.parent
     log_dir.mkdir(exist_ok=True)
 
     # 配置日志轮转
     rotating_handler = RotatingFileHandler(
         filename=str(log_path),
-        maxBytes=settings.LOG_FILE_MAX_BYTES,
-        backupCount=settings.LOG_FILE_BACKUP_COUNT,
+        maxBytes=settings.LOG.FILE_MAX_BYTES,
+        backupCount=settings.LOG.FILE_BACKUP_COUNT,
         encoding="utf-8"
     )
 
     # 配置日志格式
     logging.basicConfig(
         handlers=[rotating_handler],
-        level=settings.LOG_LEVEL,
+        level=settings.LOG.LEVEL,
     )
 
     shared_processors = [
@@ -87,27 +87,27 @@ def setup_logging(
         structlog.processors.format_exc_info,
     ]
 
-    if settings.INCLUDE_TRACE_ID:
+    if settings.API.INCLUDE_TRACE_ID:
         shared_processors.append(inject_trace_id)
 
-    match settings.LOG_FORMAT.upper():
+    match settings.LOG.FORMAT.upper():
         case "CONSOLE":
             output_processors = [
-                ConsoleRenderer(colors=settings.LOG_COLORS),
+                ConsoleRenderer(colors=settings.LOG.COLORS),
             ]
         case "JSON":
             output_processors = [
                 ExceptionRenderer(
                     ExceptionDictTransformer(
-                        show_locals=settings.TRACEBACK_SHOW_LOCALS,
+                        show_locals=settings.API.TRACEBACK_SHOW_LOCALS,
                         locals_max_string=100,
-                        max_frames=settings.TRACEBACK_MAX_FRAMES,
+                        max_frames=settings.API.TRACEBACK_MAX_FRAMES,
                     )
                 ),
                 structlog.processors.JSONRenderer()
             ]
         case _:
-            raise ValueError(f"Unknown logging format: {settings.LOG_FORMAT}")
+            raise ValueError(f"Unknown logging format: {settings.LOG.FORMAT}")
 
     structlog.configure(
         logger_factory=LoggerFactory(),

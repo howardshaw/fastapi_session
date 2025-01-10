@@ -16,7 +16,7 @@ class WorkspaceService:
         self.db = db
         self.workspace_repository = workspace_repository
 
-    async def create_workspace(self, workspace_data: WorkspaceCreate, user_id: int) -> Workspace:
+    async def create_workspace(self, workspace_data: WorkspaceCreate, user_id: uuid.UUID) -> Workspace:
         """
         创建工作空间
         """
@@ -29,7 +29,7 @@ class WorkspaceService:
             logger.info(f"Created workspace with id: {workspace.id}")
             return workspace
 
-    async def get_user_workspace(self, user_id: int, workspace_id: int) -> Optional[Workspace]:
+    async def get_user_workspace(self, user_id: uuid.UUID, workspace_id: uuid.UUID) -> Optional[Workspace]:
         """
         获取用户的特定工作空间
         """
@@ -48,7 +48,7 @@ class WorkspaceService:
         )
 
     async def update_workspace(
-        self, user_id: int, workspace_id: int, workspace_data: WorkspaceUpdate
+        self, user_id: uuid.UUID, workspace_id: uuid.UUID, workspace_data: WorkspaceUpdate
     ) -> Optional[Workspace]:
         """
         更新工作空间
