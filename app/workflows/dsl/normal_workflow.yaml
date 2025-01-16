@@ -1,6 +1,7 @@
 variables:
   resource_id: "0194434a-70cc-78d0-b960-1157ce9c02d3"
   collection_name: "dataset"
+  clean_transform: "clean"
   chunk_size: 1000
 
 root:
@@ -14,8 +15,8 @@ root:
 
       # 清理内容
       - activity:
-          name: clean_content
-          arguments: [ "documents" ]
+          name: transform_documents
+          arguments: [ "documents", "clean_transform" ]
           result: cleaned_documents
 
       # 切分文档

@@ -9,11 +9,9 @@ from app.logger import get_logger, setup_logging
 from app.settings import TemporalSettings
 from app.workflows.dsl.activities import (
     LoadDocumentActivity,
-    CleanContentActivity,
     SplitDocumentsActivity,
     StoreDocumentsActivity,
-    HypotheticalQuestionActivity,
-    GenerateSummaryActivity,
+    TransformDocumentsActivity,
     VectorStoreActivity,
     RetrieveActivity,
 )
@@ -28,12 +26,10 @@ async def create_worker(
         settings: TemporalSettings = Provide[Container.settings.provided.TEMPORAL],
         client: Client = Provide[Container.temporal_client],
         load_document_activity: LoadDocumentActivity = Provide[Container.load_document_activity],
-        clean_content_activity: CleanContentActivity = Provide[Container.clean_content_activity],
         split_documents_activity: SplitDocumentsActivity = Provide[Container.split_documents_activity],
         store_documents_activity: StoreDocumentsActivity = Provide[Container.store_documents_activity],
-        hypothetical_question_activity: HypotheticalQuestionActivity = Provide[
-            Container.hypothetical_question_activity],
-        generate_summary_activity: GenerateSummaryActivity = Provide[Container.generate_summary_activity],
+        transform_activity: TransformDocumentsActivity = Provide[
+            Container.transform_activity],
         vector_store_activity: VectorStoreActivity = Provide[Container.vector_store_activity],
         retrieve_activity: RetrieveActivity = Provide[Container.retrieve_activity],
 ) -> Worker:
@@ -43,11 +39,9 @@ async def create_worker(
         task_queue=settings.DSL_QUEUE,
         activities=[
             load_document_activity.run,
-            clean_content_activity.run,
             split_documents_activity.run,
             store_documents_activity.run,
-            hypothetical_question_activity.run,
-            generate_summary_activity.run,
+            transform_activity.run,
             vector_store_activity.run,
             retrieve_activity.run,
         ],

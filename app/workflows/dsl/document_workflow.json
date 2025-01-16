@@ -4,7 +4,10 @@
     "collection_name": "dataset",
     "faq_collection_name": "dataset_faq",
     "summary_collection_name": "dataset_summary",
-    "chunk_size": 1000
+    "clean_transform": "clean",
+    "hypothetical_question_transform": "hypothetical_question",
+    "summary_transform": "summary",
+    "chunk_size": 512
   },
   "root": {
     "sequence": {
@@ -20,9 +23,10 @@
         },
         {
           "activity": {
-            "name": "clean_content",
+            "name": "transform_documents",
             "arguments": [
-              "documents"
+              "documents",
+              "clean_transform"
             ],
             "result": "cleaned_documents"
           }
@@ -58,9 +62,10 @@
                               "elements": [
                                 {
                                   "activity": {
-                                    "name": "hypothetical_question",
+                                    "name": "transform_documents",
                                     "arguments": [
-                                      "splits"
+                                      "splits",
+                                      "hypothetical_question_transform"
                                     ],
                                     "result": "questions"
                                   }
@@ -83,9 +88,10 @@
                               "elements": [
                                 {
                                   "activity": {
-                                    "name": "generate_summary",
+                                    "name": "transform_documents",
                                     "arguments": [
-                                      "splits"
+                                      "splits",
+                                      "summary_transform"
                                     ],
                                     "result": "summary"
                                   }

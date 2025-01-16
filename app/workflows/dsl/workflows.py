@@ -75,6 +75,12 @@ class DSLWorkflow:
                 start_to_close_timeout=timedelta(minutes=100),
             )
             if stmt.activity.result:
+                if isinstance(result, list):
+                    logger.info(
+                        f"{stmt.activity.name} result: {len(result)} {type(result[0])} ")
+                else:
+                    logger.info(
+                        f"{stmt.activity.name} result:  {type(result)} ")
                 self.variables[stmt.activity.result] = result
         elif isinstance(stmt, SequenceStatement):
             # Execute each statement in order

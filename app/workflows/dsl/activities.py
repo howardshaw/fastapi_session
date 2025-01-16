@@ -1,20 +1,17 @@
-import os
-import tempfile
 import uuid
 from typing import List, Optional
 
 from langchain_core.documents import Document
+from langchain_core.language_models import BaseLLM
 from temporalio import activity
 
 from app.logger import get_logger
 from app.repositories.resource import ResourceRepository
 from app.services.doc_store.base import DocumentStore
-from app.services.document_processor import DocumentProcessor
-from app.services.document_transform import (
-    ContentCleanTransformer,
-    ChunkSplitTransformer,
-    HypotheticalQuestionTransformer,
-    SummaryTransformer
+from app.services.document_loader import create_loader, LoaderType
+from app.services.document_splitter import create_splitter, SplitterType
+from app.services.document_transformer import (
+    create_transformer,
 )
 from app.services.embeddings import EmbeddingService
 from app.services.storage import StorageService
@@ -31,46 +28,90 @@ class LoadDocumentActivity:
             self,
             storage_service: StorageService,
             resource_repository: ResourceRepository,
-            document_processor: DocumentProcessor
     ):
         self.storage_service = storage_service
         self.resource_repository = resource_repository
-        self.document_processor = document_processor
 
     @activity.defn(name="load_document")
     async def run(self, resource_id: str) -> List[Document]:
-        """获取资源并直接处理成文档"""
-        # 获取资源
-        resource = await self.resource_repository.read_by_id(uuid.UUID(resource_id))
-        # 创建一个临时随机目录
-        temp_dir = tempfile.mkdtemp()
-        logger.info(f"生成的临时目录路径: {temp_dir}")
+        if resource_id is None:
+            return []
+        # 使用工厂方法创建加载器
+        loader = create_loader(
+            loader_type=LoaderType.LANGCHAIN,
+            resource_repository=self.resource_repository,
+            storage_service=self.storage_service
+        )
 
-        # 创建临时文件的路径
-        file_name = "downloaded_file.pdf"
-        download_path = os.path.join(temp_dir, resource.name)
-
-        await self.storage_service.download(resource.path, download_path)
-
-        # 直接处理成文档
-        documents = await self.document_processor.process(download_path, resource.mime_type)
-
-        # TODO 如果文档太大
-
+        documents = []
+        async for doc in loader.load_document(uuid.UUID(resource_id)):
+            documents.append(doc)
+        logger.info(f"loaded {len(documents)} documents")
         return documents
 
 
-class CleanContentActivity:
-    """内容清理Activity"""
+class SplitDocumentsActivity:
+    """文档分块Activity"""
 
-    def __init__(self, transformer: ContentCleanTransformer):
-        self.transformer = transformer
+    def __init__(self):
+        pass
 
-    @activity.defn(name="clean_content")
-    async def run(self, documents: List[Document]) -> List[Document]:
-        if len(documents) == 0:
+    @activity.defn(name="split_documents")
+    async def run(
+            self,
+            documents: List[Document],
+            chunk_size: int = 1000
+    ) -> List[Document]:
+        if not documents:
             return []
-        return await self.transformer.transform(documents)
+
+        logger.info(f"SplitDocumentsActivity for length {len(documents)} {type(documents[0])}")
+        # 使用工厂方法创建分割器
+        splitter = create_splitter(
+            splitter_type=SplitterType.LANGCHAIN,
+            chunk_size=chunk_size,
+        )
+
+        split_docs = []
+        async for doc in splitter.split(documents):
+            doc.id = str(uuid.uuid4())
+            split_docs.append(doc)
+        logger.info(f"split {len(documents)} documents")
+        return split_docs
+
+
+class TransformDocumentsActivity:
+    """文档转换Activity"""
+
+    def __init__(
+            self,
+            llm: Optional[BaseLLM] = None
+    ):
+        self.llm = llm
+
+    @activity.defn(name="transform_documents")
+    async def run(
+            self,
+            documents: List[Document],
+            transformer_type: str,
+    ) -> List[Document]:
+        if not documents:
+            return []
+        logger.info(
+            f"TransformDocumentsActivity {transformer_type} for length {len(documents)} {type(documents[0])} {documents[0]}")
+
+        # 使用工厂方法创建转换器
+        transformer = create_transformer(
+            transformer_type=transformer_type,
+            llm=self.llm,
+        )
+
+        transformed_docs = []
+        # document_generator = await transformer.transform(documents)
+        async for doc in transformer.transform(documents):
+            transformed_docs.append(doc)
+
+        return transformed_docs
 
 
 class StoreDocumentsActivity:
@@ -79,7 +120,7 @@ class StoreDocumentsActivity:
     def __init__(
             self,
             doc_store: DocumentStore,
-            batch_size: int = 100
+            batch_size: int = 50
     ):
         self.doc_store = doc_store
         self.batch_size = batch_size
@@ -89,75 +130,18 @@ class StoreDocumentsActivity:
             self,
             documents: List[Document],
     ) -> None:
-        if len(documents) == 0:
+        if not documents:
             return
-        logger.info(f"store document for {len(documents)} documents {type(documents[0])} {documents[0]}")
-
+        logger.info(f"StoreDocumentsActivity for length {len(documents)} {type(documents[0])}")
         batches = [
             documents[i: i + self.batch_size]
             for i in range(0, len(documents), self.batch_size)
         ]
 
         for idx, batch in enumerate(batches):
-            doc_ids = [doc.id for doc in batch]
+            doc_ids = [doc.id for doc in batch if doc.id]
             logger.info(f"Processing batch {idx + 1}/{len(batches)} with {len(batch)} {type(batch[0])} documents.")
             await self.doc_store.amset(list(zip(doc_ids, batch)))
-
-        logger.info("All documents have been successfully stored.")
-        return
-
-
-class SplitDocumentsActivity:
-    """文档分块Activity"""
-
-    def __init__(
-            self,
-            transformer: ChunkSplitTransformer
-    ):
-        self.transformer = transformer
-
-    @activity.defn(name="split_documents")
-    async def run(
-            self,
-            documents: List[Document],
-            chunk_size: int = 1000
-    ) -> List[Document]:
-        if len(documents) == 0:
-            return []
-        logger.info(f"split document for {len(documents)} documents {type(documents[0])} {documents[0]}")
-        self.transformer.chunk_size = chunk_size
-        res = await self.transformer.transform(documents)
-        if len(res) == 0:
-            return []
-        logger.info(f"split document result for {len(res)}  {type(res[0])} {res[0]}")
-        return res[:2]
-
-
-class HypotheticalQuestionActivity:
-    """生成假设问Activity"""
-
-    def __init__(self, transformer: HypotheticalQuestionTransformer):
-        self.transformer = transformer
-
-    @activity.defn(name="hypothetical_question")
-    async def run(self, documents: List[Document]) -> List[Document]:
-        if len(documents) == 0:
-            return []
-        return await self.transformer.transform(documents)
-
-
-class GenerateSummaryActivity:
-    """摘要生成Activity"""
-
-    def __init__(self, transformer: SummaryTransformer):
-        self.transformer = transformer
-
-    @activity.defn(name="generate_summary")
-    async def run(self, documents: List[Document]) -> List[Document]:
-        if len(documents) == 0:
-            return []
-        logger.info(f"generating summary for {len(documents)} documents {type(documents[0])} {documents[0]}")
-        return await self.transformer.transform(documents)
 
 
 class VectorStoreActivity:
@@ -177,20 +161,8 @@ class VectorStoreActivity:
             documents: List[Document],
             collection_name: Optional[str] = None,
     ) -> List[str]:
-        """
-        将文档存储到向量数据库
-        
-        Args:
-            splits: 要存储的文档列表
-            collection_name: 集合名称
-            store_type: 向量存储类型，支持 "chroma"、"milvus" 或 "opensearch"
-            
-        Returns:
-            List[str]: 存储的文档ID列表
-        """
-        if len(documents) == 0:
+        if not documents:
             return []
-        logger.info(f"store document  for {len(documents)} documents {type(documents[0])} {documents[0]}")
 
         vector_store = create_vector_store(
             embedding_service=self.embedding_service,
@@ -199,13 +171,11 @@ class VectorStoreActivity:
             store_type=self.vector_store_settings.PROVIDER,
         )
 
-        return vector_store.add_documents(
-            documents=documents,
-        )
+        return vector_store.add_documents(documents=documents)
 
 
 class RetrieveActivity:
-    """向量存储Activity"""
+    """文档检索Activity"""
 
     def __init__(
             self,
@@ -231,12 +201,11 @@ class RetrieveActivity:
             store_type=self.vector_store_settings.PROVIDER,
         )
 
-        logger.info(f"retrieve documents for {query} in collection {collection_name}")
         docs = await vector_store.aretrieve(query, collection_name)
-        if len(docs) == 0:
+        if not docs:
             return []
+
         if retriever_type and retriever_type == "multi":
-            logger.info(f"retrieved documents for {len(docs)} in collection {collection_name} {docs[0]}")
             ids = []
             for d in docs:
                 if "doc_id" in d.metadata and d.metadata["doc_id"] not in ids:

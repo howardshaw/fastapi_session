@@ -19,33 +19,32 @@ from app.services import (
 )
 from app.services.auth import AuthService
 from app.services.dataset import DatasetService
-from app.services.doc_store.mysql import MySQLDocumentStore
+from app.services.doc_store import MySQLDocumentStore
 from app.services.document_decryption import SimpleDocumentDecryptionService
-from app.services.document_processor import LangchainDocumentProcessor
-from app.services.document_transform import (
-    ContentCleanTransformer,
-    ChunkSplitTransformer,
-    HypotheticalQuestionTransformer,
-    SummaryTransformer
+from app.services.embeddings import (
+    OpenAIEmbeddingService,
+    HuggingFaceEmbeddingService
 )
-from app.services.embeddings.huggingface import HuggingFaceEmbeddingService
-from app.services.embeddings.openai import OpenAIEmbeddingService
-from app.services.llm.claude_service import ClaudeService
-from app.services.llm.ollama_service import OllamaService
-from app.services.llm.openai_service import OpenAIService
+from app.services.llm import (
+    ClaudeService,
+    OllamaService,
+    OpenAIService
+)
 from app.services.resource import ResourceService
 from app.services.storage import MinioStorageService
-from app.services.vector_store.chroma import ChromaVectorStore
-from app.services.vector_store.milvus import MilvusVectorStore
-from app.services.vector_store.opensearch import OpenSearchVectorStore
+from app.services.vector_store import (
+    ChromaVectorStore,
+    MilvusVectorStore,
+    OpenSearchVectorStore
+)
 from app.settings import get_settings
 from app.workflows.dsl.activities import (
     LoadDocumentActivity,
-    CleanContentActivity,
     SplitDocumentsActivity,
-    HypotheticalQuestionActivity,
-    GenerateSummaryActivity,
-    VectorStoreActivity, StoreDocumentsActivity, RetrieveActivity,
+    TransformDocumentsActivity,
+    VectorStoreActivity,
+    StoreDocumentsActivity,
+    RetrieveActivity,
 )
 from app.workflows.transfer.activities import AccountActivities
 from app.workflows.translate.activities import TranslateActivities
@@ -214,10 +213,6 @@ class Container(containers.DeclarativeContainer):
         redis_client=redis_client
     )
 
-    document_processor = providers.Singleton(
-        LangchainDocumentProcessor
-    )
-
     decryption_service = providers.Singleton(
         SimpleDocumentDecryptionService
     )
@@ -230,27 +225,6 @@ class Container(containers.DeclarativeContainer):
     llm_service = providers.Singleton(
         OpenAIService,
         settings=settings.provided.LLM,
-    )
-
-    # Transformers
-    clean_transformer = providers.Singleton(
-        ContentCleanTransformer
-    )
-
-    chunk_transformer = providers.Singleton(
-        ChunkSplitTransformer,
-        chunk_size=1000,
-        chunk_overlap=200
-    )
-
-    faq_transformer = providers.Singleton(
-        HypotheticalQuestionTransformer,
-        llm=llm_service
-    )
-
-    summary_transformer = providers.Singleton(
-        SummaryTransformer,
-        llm=llm_service
     )
 
     # Embedding Service (按需创建)
@@ -314,17 +288,10 @@ class Container(containers.DeclarativeContainer):
         LoadDocumentActivity,
         storage_service=storage_service,
         resource_repository=resource_repository,
-        document_processor=document_processor
-    )
-
-    clean_content_activity = providers.Singleton(
-        CleanContentActivity,
-        transformer=clean_transformer
     )
 
     split_documents_activity = providers.Singleton(
         SplitDocumentsActivity,
-        transformer=chunk_transformer
     )
 
     store_documents_activity = providers.Singleton(
@@ -332,14 +299,9 @@ class Container(containers.DeclarativeContainer):
         doc_store=document_store,
     )
 
-    hypothetical_question_activity = providers.Singleton(
-        HypotheticalQuestionActivity,
-        transformer=faq_transformer
-    )
-
-    generate_summary_activity = providers.Singleton(
-        GenerateSummaryActivity,
-        transformer=summary_transformer
+    transform_activity = providers.Singleton(
+        TransformDocumentsActivity,
+        llm=llm,
     )
 
     vector_store_activity = providers.Singleton(
