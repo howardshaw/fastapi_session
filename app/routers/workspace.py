@@ -1,13 +1,11 @@
 import uuid
-from typing import List
 
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.core.containers import Container
 from app.core.auth import CurrentUser
+from app.core.containers import Container
 from app.logger import get_logger
-from app.models.user import User
 from app.schemas.workspace import (
     WorkspaceCreate,
     WorkspaceUpdate,
@@ -29,7 +27,7 @@ logger = get_logger(__name__)
 async def create_workspace(
         workspace: WorkspaceCreate,
         current_user: CurrentUser,
-        workspace_service: WorkspaceService = Depends(Provide[Container.workspace_service])
+        workspace_service: WorkspaceService = Depends(Provide[Container.services.workspace_service])
 ):
     """创建工作空间"""
     return await workspace_service.create_workspace(workspace, current_user.id)
@@ -40,7 +38,7 @@ async def create_workspace(
 async def get_workspace(
         workspace_id: uuid.UUID,
         current_user: CurrentUser,
-        workspace_service: WorkspaceService = Depends(Provide[Container.workspace_service])
+        workspace_service: WorkspaceService = Depends(Provide[Container.services.workspace_service])
 ):
     """获取特定工作空间"""
     workspace = await workspace_service.get_user_workspace(current_user.id, workspace_id)
@@ -55,7 +53,7 @@ async def get_workspaces(
         current_user: CurrentUser,
         skip: int = 0,
         limit: int = 100,
-        workspace_service: WorkspaceService = Depends(Provide[Container.workspace_service])
+        workspace_service: WorkspaceService = Depends(Provide[Container.services.workspace_service])
 ):
     """获取用户的工作空间列表"""
     workspaces = await workspace_service.get_user_workspaces(
@@ -65,10 +63,10 @@ async def get_workspaces(
     )
 
     total = await workspace_service.count_user_workspaces(current_user.id)
-    
+
     # 将每个 workspace 转换为 WorkspaceResponse
     workspace_responses = [WorkspaceResponse.model_validate(workspace) for workspace in workspaces]
-    
+
     return WorkspaceListResponse(
         items=workspace_responses,
         total=total,
@@ -83,7 +81,7 @@ async def update_workspace(
         workspace_id: uuid.UUID,
         workspace: WorkspaceUpdate,
         current_user: CurrentUser,
-        workspace_service: WorkspaceService = Depends(Provide[Container.workspace_service])
+        workspace_service: WorkspaceService = Depends(Provide[Container.services.workspace_service])
 ):
     """更新工作空间"""
     updated_workspace = await workspace_service.update_workspace(
@@ -101,7 +99,7 @@ async def update_workspace(
 async def delete_workspace(
         workspace_id: uuid.UUID,
         current_user: CurrentUser,
-        workspace_service: WorkspaceService = Depends(Provide[Container.workspace_service])
+        workspace_service: WorkspaceService = Depends(Provide[Container.services.workspace_service])
 ):
     """删除工作空间"""
     deleted_workspace = await workspace_service.delete_workspace(

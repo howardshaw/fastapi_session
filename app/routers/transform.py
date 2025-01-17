@@ -23,7 +23,7 @@ router = APIRouter(
 @inject
 async def transfer(
         transfer_request: TransferRequest,
-        client: Client = Depends(Provide[Container.temporal_client]),
+        client: Client = Depends(Provide[Container.clients.temporal_client]),
         settings: TemporalSettings = Depends(Provide[Container.settings.provided.TEMPORAL]),
 ):
     try:

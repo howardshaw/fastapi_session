@@ -35,7 +35,7 @@ class SummaryTransformer(DocumentTransformer):
         self.chain = prompt | llm | StrOutputParser()
 
     async def transform(self, documents: List[Document]) -> AsyncGenerator[Document, None]:
-        for doc in documents[:2]:
+        for doc in documents:
             # 生成摘要
             summary = await self.chain.ainvoke({
                 "text": doc.page_content,

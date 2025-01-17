@@ -113,7 +113,7 @@ class ResourceService:
         # 删除存储的文件
         if await self.storage.delete_file(resource.path):
             # 删除数据库记录
-            await self.repository.delete(resource)
+            await self.repository.delete_by_id(resource.id)
             return True
         return False
 

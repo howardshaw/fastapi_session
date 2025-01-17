@@ -3,7 +3,7 @@ from datetime import timedelta
 from minio import Minio
 from minio.error import MinioException
 
-from app.settings import MinioSettings
+from app.settings import StorageSettings
 from app.logger import get_logger
 from .base import StorageService
 
@@ -11,14 +11,14 @@ logger = get_logger(__name__)
 
 
 class MinioStorageService(StorageService):
-    def __init__(self, settings: MinioSettings):
+    def __init__(self, settings: StorageSettings):
         self.client = Minio(
-            endpoint=settings.ENDPOINT,
-            access_key=settings.ACCESS_KEY,
-            secret_key=settings.SECRET_KEY,
-            secure=settings.SECURE
+            endpoint=settings.MINIO_ENDPOINT,
+            access_key=settings.MINIO_ACCESS_KEY,
+            secret_key=settings.MINIO_SECRET_KEY,
+            secure=settings.MINIO_SECURE
         )
-        self.bucket = settings.BUCKET
+        self.bucket = settings.MINIO_BUCKET
         self._ensure_bucket()
 
     def _ensure_bucket(self):

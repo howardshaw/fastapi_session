@@ -28,11 +28,12 @@ logger = get_logger(__name__)
 @inject
 async def translate(
         translate_request: TranslateRequest,
-        client: Client = Depends(Provide[Container.temporal_client]),
-        redis_client: redis.Redis = Depends(Provide[Container.redis_client]),
+        client: Client = Depends(Provide[Container.clients.temporal_client]),
+        redis_client: redis.Redis = Depends(Provide[Container.clients.redis_client]),
         settings: TemporalSettings = Depends(Provide[Container.settings.provided.TEMPORAL]),
 ):
     logger.info(f"translate request: {translate_request}")
+
     async def event_generator():
         try:
             task_id = str(uuid.uuid4())

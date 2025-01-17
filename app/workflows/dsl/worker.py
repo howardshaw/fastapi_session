@@ -24,14 +24,13 @@ logger = get_logger(__name__)
 @inject
 async def create_worker(
         settings: TemporalSettings = Provide[Container.settings.provided.TEMPORAL],
-        client: Client = Provide[Container.temporal_client],
-        load_document_activity: LoadDocumentActivity = Provide[Container.load_document_activity],
-        split_documents_activity: SplitDocumentsActivity = Provide[Container.split_documents_activity],
-        store_documents_activity: StoreDocumentsActivity = Provide[Container.store_documents_activity],
-        transform_activity: TransformDocumentsActivity = Provide[
-            Container.transform_activity],
-        vector_store_activity: VectorStoreActivity = Provide[Container.vector_store_activity],
-        retrieve_activity: RetrieveActivity = Provide[Container.retrieve_activity],
+        client: Client = Provide[Container.clients.temporal_client],
+        load_document_activity: LoadDocumentActivity = Provide[Container.activities.load_document_activity],
+        split_documents_activity: SplitDocumentsActivity = Provide[Container.activities.split_documents_activity],
+        store_documents_activity: StoreDocumentsActivity = Provide[Container.activities.store_documents_activity],
+        transform_activity: TransformDocumentsActivity = Provide[Container.activities.transform_activity],
+        vector_store_activity: VectorStoreActivity = Provide[Container.activities.vector_store_activity],
+        retrieve_activity: RetrieveActivity = Provide[Container.activities.retrieve_activity],
 ) -> Worker:
     """Create and configure a Temporal worker"""
     return Worker(

@@ -1,13 +1,12 @@
 from dependency_injector.wiring import inject, Provide
 from fastapi import APIRouter, Depends, HTTPException, status, Response
-from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.containers import Container
 from app.logger.logger import get_logger
 from app.schemas.auth import Token, LoginRequest
 from app.schemas.user import UserCreate, UserResponse
-from app.services.auth import AuthService
 from app.services import UserService
+from app.services.auth import AuthService
 
 logger = get_logger(__name__)
 router = APIRouter(
@@ -16,11 +15,12 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 @inject
 async def register(
         user_data: UserCreate,
-        user_service: UserService = Depends(Provide[Container.user_service])
+        user_service: UserService = Depends(Provide[Container.services.user_service])
 ):
     """
     用户注册
@@ -44,12 +44,13 @@ async def register(
             detail="Error creating user"
         ) from e
 
+
 @router.post("/token", response_model=Token)
 @inject
 async def login(
-    response: Response,
-    login_data: LoginRequest,
-    auth_service: AuthService = Depends(Provide[Container.auth_service])
+        response: Response,
+        login_data: LoginRequest,
+        auth_service: AuthService = Depends(Provide[Container.services.auth_service])
 ):
     """
     用户登录
@@ -71,4 +72,4 @@ async def login(
     return {
         "access_token": access_token,
         "token_type": "bearer"
-    } 
+    }

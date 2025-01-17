@@ -16,7 +16,7 @@ class OllamaEmbeddingService(EmbeddingService):
             base_url=settings.OLLAMA_BASE_URL,
         )
         self._model_name = settings.OLLAMA_MODEL
-        super().__init__(self._embeddings)
+
 
     @property
     def model_name(self) -> str:

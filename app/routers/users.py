@@ -25,7 +25,7 @@ def get_users():
 @inject
 async def get_current_user(
         current_user: CurrentUser,
-        user_service: UserService = Depends(Provide[Container.user_service])
+        user_service: UserService = Depends(Provide[Container.services.user_service])
 ):
     logger.info(f"get current user {current_user.id} trace: {trace.get_current_span().get_span_context().trace_id}")
 

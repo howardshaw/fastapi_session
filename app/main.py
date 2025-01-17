@@ -1,6 +1,3 @@
-"""
-FastAPI Application Entry Point
-"""
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -118,7 +115,7 @@ def create_app() -> FastAPI:
     # 注册认证中间件
     app.add_middleware(
         AuthMiddleware,
-        auth_service=container.auth_service(),
+        auth_service=container.services.auth_service(),
         exclude_paths=[
             "/docs",
             "/redoc",

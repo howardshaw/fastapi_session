@@ -27,7 +27,7 @@ logger = get_logger(__name__)
 async def create_dataset(
         dataset: DatasetCreate,
         current_user: CurrentUser,
-        dataset_service: DatasetService = Depends(Provide[Container.dataset_service])
+        dataset_service: DatasetService = Depends(Provide[Container.services.dataset_service])
 ):
     """创建知识库"""
     return await dataset_service.create_dataset(dataset, current_user.id)
@@ -40,7 +40,7 @@ async def get_workspace_datasets(
         current_user: CurrentUser,
         skip: int = 0,
         limit: int = 100,
-        dataset_service: DatasetService = Depends(Provide[Container.dataset_service])
+        dataset_service: DatasetService = Depends(Provide[Container.services.dataset_service])
 ):
     """获取工作空间下的知识库列表"""
     datasets = await dataset_service.get_workspace_datasets(
@@ -49,12 +49,12 @@ async def get_workspace_datasets(
         skip=skip,
         limit=limit
     )
-    
+
     total = await dataset_service.count_workspace_datasets(
         workspace_id=workspace_id,
         user_id=current_user.id
     )
-    
+
     return DatasetListResponse(
         items=[DatasetResponse.model_validate(d) for d in datasets],
         total=total,
@@ -68,7 +68,7 @@ async def get_workspace_datasets(
 async def get_dataset(
         dataset_id: uuid.UUID,
         current_user: CurrentUser,
-        dataset_service: DatasetService = Depends(Provide[Container.dataset_service])
+        dataset_service: DatasetService = Depends(Provide[Container.services.dataset_service])
 ):
     """获取特定知识库"""
     dataset = await dataset_service.get_user_dataset(current_user.id, dataset_id)
@@ -83,7 +83,7 @@ async def update_dataset(
         dataset_id: uuid.UUID,
         dataset: DatasetUpdate,
         current_user: CurrentUser,
-        dataset_service: DatasetService = Depends(Provide[Container.dataset_service])
+        dataset_service: DatasetService = Depends(Provide[Container.services.dataset_service])
 ):
     """更新知识库"""
     updated_dataset = await dataset_service.update_dataset(
@@ -101,7 +101,7 @@ async def update_dataset(
 async def delete_dataset(
         dataset_id: uuid.UUID,
         current_user: CurrentUser,
-        dataset_service: DatasetService = Depends(Provide[Container.dataset_service])
+        dataset_service: DatasetService = Depends(Provide[Container.services.dataset_service])
 ):
     """删除知识库"""
     deleted_dataset = await dataset_service.delete_dataset(

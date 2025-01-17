@@ -22,7 +22,7 @@ logger = get_logger(__name__)
 @inject
 async def create_dsl_workflow(
         dsl_request: DSLRequest,
-        client: Client = Depends(Provide[Container.temporal_client]),
+        client: Client = Depends(Provide[Container.clients.temporal_client]),
         settings: TemporalSettings = Depends(Provide[Container.settings.provided.TEMPORAL]),
 ):
     """创建并执行 DSL 工作流"""

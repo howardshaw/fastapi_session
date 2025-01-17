@@ -21,8 +21,8 @@ router = APIRouter(
 @inject
 async def create_transaction(
         request: TransactionRequest,
-        db: Database = Depends(Provide[Container.db]),
-        order_service: OrderService = Depends(Provide[Container.order_service]),
+        db: Database = Depends(Provide[Container.database.db]),
+        order_service: OrderService = Depends(Provide[Container.services.order_service]),
 ):
     """Create a new transaction."""
     # 测试查询 - 使用普通 session

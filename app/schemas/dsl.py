@@ -38,60 +38,142 @@ class DSLRequest(BaseModel):
     variables: Dict[str, Any] = Field(
         default_factory=dict,
         description="工作流变量定义",
-        examples=[{"arg1": "value1", "arg2": "value2"}]
+        examples=[{
+            "resource_id": "0194434a-70cc-78d0-b960-1157ce9c02d3",
+            "collection_name": "dataset",
+            "faq_collection_name": "dataset_faq",
+            "summary_collection_name": "dataset_summary",
+            "clean_transform": "clean",
+            "hypothetical_question_transform": "hypothetical_question",
+            "summary_transform": "summary",
+            "chunk_size": 512,
+        }]
     )
     root: RootDefinition = Field(
         ...,
         description="工作流根节点定义",
         examples=[{
-            "variables": {
-                "resource_id": "0194434a-70cc-78d0-b960-1157ce9c02d3",
-                "collection_name": "dataset",
-                "chunk_size": 1000
-            },
-            "root": {
-                "sequence": {
-                    "elements": [
-                        {
-                            "activity": {
-                                "name": "load_document",
-                                "arguments": [
-                                    "resource_id"
-                                ],
-                                "result": "documents"
-                            }
-                        },
-                        {
-                            "activity": {
-                                "name": "clean_content",
-                                "arguments": [
-                                    "documents"
-                                ],
-                                "result": "cleaned_documents"
-                            }
-                        },
-                        {
-                            "activity": {
-                                "name": "split_documents",
-                                "arguments": [
-                                    "cleaned_documents",
-                                    "chunk_size"
-                                ],
-                                "result": "splits"
-                            }
-                        },
-                        {
-                            "activity": {
-                                "name": "store_vectors",
-                                "arguments": [
-                                    "splits",
-                                    "collection_name"
-                                ]
-                            }
+            "sequence": {
+                "elements": [
+                    {
+                        "activity": {
+                            "name": "load_document",
+                            "arguments": [
+                                "resource_id"
+                            ],
+                            "result": "documents"
                         }
-                    ]
-                }
+                    },
+                    {
+                        "activity": {
+                            "name": "transform_documents",
+                            "arguments": [
+                                "documents",
+                                "clean_transform"
+                            ],
+                            "result": "cleaned_documents"
+                        }
+                    },
+                    {
+                        "activity": {
+                            "name": "split_documents",
+                            "arguments": [
+                                "cleaned_documents",
+                                "chunk_size"
+                            ],
+                            "result": "splits"
+                        }
+                    },
+                    {
+                        "parallel": {
+                            "branches": [
+                                {
+                                    "sequence": {
+                                        "elements": [
+                                            {
+                                                "activity": {
+                                                    "name": "store_documents",
+                                                    "arguments": ["splits"],
+                                                    "result": "docstore"
+                                                }
+                                            },
+                                            {
+                                                "parallel": {
+                                                    "branches": [
+                                                        {
+                                                            "sequence": {
+                                                                "elements": [
+                                                                    {
+                                                                        "activity": {
+                                                                            "name": "transform_documents",
+                                                                            "arguments": [
+                                                                                "splits",
+                                                                                "hypothetical_question_transform"
+                                                                            ],
+                                                                            "result": "questions"
+                                                                        }
+                                                                    },
+                                                                    {
+                                                                        "activity": {
+                                                                            "name": "store_vectors",
+                                                                            "arguments": [
+                                                                                "questions",
+                                                                                "faq_collection_name"
+                                                                            ],
+                                                                            "result": "questions_result"
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            }
+                                                        },
+                                                        {
+                                                            "sequence": {
+                                                                "elements": [
+                                                                    {
+                                                                        "activity": {
+                                                                            "name": "transform_documents",
+                                                                            "arguments": [
+                                                                                "splits",
+                                                                                "summary_transform"
+                                                                            ],
+                                                                            "result": "summary"
+                                                                        }
+                                                                    },
+                                                                    {
+                                                                        "activity": {
+                                                                            "name": "store_vectors",
+                                                                            "arguments": [
+                                                                                "summary",
+                                                                                "summary_collection_name"
+                                                                            ],
+                                                                            "result": "summary_result"
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    "activity": {
+                                        "name": "store_vectors",
+                                        "arguments": [
+                                            "splits",
+                                            "collection_name"
+                                        ],
+                                        "result": "vectors_result"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
             }
+
         }]
     )
 
@@ -139,62 +221,3 @@ class DSLRequest(BaseModel):
             root=root_statement,
             variables=self.variables
         )
-
-    model_config = {
-        "json_schema_extra": {
-            "example": {
-                "variables": {
-                    "resource_id": "0194434a-70cc-78d0-b960-1157ce9c02d3",
-                    "collection_name": "dataset",
-                    "chunk_size": 1000
-                },
-                "root": {
-                    "sequence": {
-                        "elements": [
-                            {
-                                "activity": {
-                                    "name": "load_document",
-                                    "arguments": [
-                                        "resource_id"
-                                    ],
-                                    "result": "documents"
-                                }
-                            },
-                            {
-                                "activity": {
-                                    "name": "clean_content",
-                                    "arguments": [
-                                        "documents"
-                                    ],
-                                    "result": "cleaned_documents"
-                                }
-                            },
-                            {
-                                "activity": {
-                                    "name": "split_documents",
-                                    "arguments": [
-                                        "cleaned_documents",
-                                        "chunk_size"
-                                    ],
-                                    "result": "splits"
-                                }
-                            },
-                            {
-                                "activity": {
-                                    "name": "store_vectors",
-                                    "arguments": [
-                                        "splits",
-                                        "collection_name"
-                                    ]
-                                }
-                            }
-                        ]
-                    }
-                }
-            }
-        }
-    }
-
-
-# 需要在类定义后更新 Forward References
-# SequenceDefinition.model_rebuild()

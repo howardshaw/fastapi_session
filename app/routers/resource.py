@@ -36,7 +36,7 @@ async def upload_resource(
         file: UploadFile = File(...),
         meta_info: Optional[str] = Form(None),
         current_user: User = Depends(get_current_user),
-        resource_service: ResourceService = Depends(Provide[Container.resource_service])
+        resource_service: ResourceService = Depends(Provide[Container.services.resource_service])
 ):
     """上传资源文件"""
     meta_info_dict = None
@@ -75,7 +75,7 @@ async def list_resources(
         workspace_id: uuid.UUID,
         query: ResourceQuery = Depends(),
         current_user: User = Depends(get_current_user),
-        resource_service: ResourceService = Depends(Provide[Container.resource_service])
+        resource_service: ResourceService = Depends(Provide[Container.services.resource_service])
 ):
     """获取工作空间的资源列表"""
     resources, urls, total = await resource_service.get_workspace_resources_with_urls(
@@ -105,7 +105,7 @@ async def delete_resource(
         workspace_id: uuid.UUID,
         resource_id: uuid.UUID,
         current_user: User = Depends(get_current_user),
-        resource_service: ResourceService = Depends(Provide[Container.resource_service])
+        resource_service: ResourceService = Depends(Provide[Container.services.resource_service])
 ):
     """删除资源"""
     success = await resource_service.delete_resource(
@@ -124,7 +124,7 @@ async def get_resource_url(
         resource_id: uuid.UUID,
         expire: int = Query(3600, ge=1, description="URL过期时间(秒)"),
         current_user: User = Depends(get_current_user),
-        resource_service: ResourceService = Depends(Provide[Container.resource_service])
+        resource_service: ResourceService = Depends(Provide[Container.services.resource_service])
 ):
     """获取资源访问URL"""
     url = await resource_service.get_resource_url(
@@ -152,7 +152,7 @@ async def update_resource(
         resource_id: uuid.UUID,
         resource_update: ResourceUpdate,
         current_user: User = Depends(get_current_user),
-        resource_service: ResourceService = Depends(Provide[Container.resource_service])
+        resource_service: ResourceService = Depends(Provide[Container.services.resource_service])
 ):
     """更新资源信息"""
     updated = await resource_service.update_resource(

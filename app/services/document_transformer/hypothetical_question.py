@@ -35,7 +35,7 @@ class HypotheticalQuestionTransformer(DocumentTransformer):
         self.chain = prompt | llm | StrOutputParser()
 
     async def transform(self, documents: List[Document]) -> AsyncGenerator[Document, None]:
-        for doc in documents[:2]:
+        for doc in documents:
             # 生成问题
             questions = await self.chain.ainvoke({
                 "text": doc.page_content,

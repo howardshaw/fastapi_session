@@ -17,8 +17,8 @@ logger = get_logger(__name__)
 @inject
 async def create_worker(
         settings: TemporalSettings = Provide[Container.settings.provided.TEMPORAL],
-        client: Client = Provide[Container.temporal_client],
-        activities: AccountActivities = Provide[Container.account_activities]
+        client: Client = Provide[Container.clients.temporal_client],
+        activities: AccountActivities = Provide[Container.activities.account_activities]
 ) -> Worker:
     """Create and configure a Temporal worker"""
     # Register workflow and activities

@@ -24,4 +24,3 @@ def setup_telemetry_logging(settings: Settings) -> None:
 
     # 添加到全局 logging 配置
     logging.basicConfig(level=settings.LOG.LEVEL, handlers=[logging_handler])
-

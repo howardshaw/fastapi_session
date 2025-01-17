@@ -11,7 +11,7 @@ from app.services.auth import AuthService
 @inject
 async def get_current_user(
     request: Request,
-    auth_service: AuthService = Depends(Provide[Container.auth_service])
+    auth_service: AuthService = Depends(Provide[Container.services.auth_service])
 ) -> User:
     """
     获取当前用户的依赖函数
