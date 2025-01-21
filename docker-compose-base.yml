@@ -10,6 +10,12 @@ services:
       - 3306:3306
     volumes:
       - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=${DATABASE__PASSWORD:-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
   temporal:
     container_name: temporal
     depends_on:
@@ -180,6 +186,7 @@ services:
   createbuckets:
     image: minio/mc
     container_name: minio-createbuckets
+    restart: on-failure
     depends_on:
       minio:
         condition: service_healthy
@@ -188,28 +195,54 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
       MINIO_ACCESS_KEY: ${STORAGE__MINIO_ACCESS_KEY:-minio-access-key}
       MINIO_SECRET_KEY: ${STORAGE__MINIO_SECRET_KEY:-minio-secret-key}
-    volumes:
-      - ./config/minio/policy.json:/tmp/policy.json
-    entrypoint: |
-      /bin/sh -c '
-        /usr/bin/mc config host add myminio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
-        
-        # 检查并创建 bucket
-        /usr/bin/mc ls myminio/resources > /dev/null 2>&1 || /usr/bin/mc mb myminio/resources &&
-        
-        /usr/bin/mc anonymous set public myminio/resources &&
+      MINIO_BUCKET: ${STORAGE__MINIO_BUCKET:-resource}
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
 
-        # 检查并创建用户
-        /usr/bin/mc admin user info myminio $${MINIO_ACCESS_KEY} > /dev/null 2>&1 || 
-        /usr/bin/mc admin user add myminio $${MINIO_ACCESS_KEY} $${MINIO_SECRET_KEY} &&
-        
-        # 删除已存在的策略（如果存在），忽略可能的错误
-        /usr/bin/mc admin policy remove myminio resources-policy 2>/dev/null || true &&
-        
-        # 创建新策略
-        /usr/bin/mc admin policy create myminio resources-policy /tmp/policy.json &&
-        /usr/bin/mc admin policy attach myminio resources-policy --user $${MINIO_ACCESS_KEY}
-      '
+      /bin/mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} --quiet 2>&1;
+      
+      echo \"Setting up minio users, buckets $${MINIO_BUCKET}, and policies...\";
+      
+      /bin/mc mb -p --quiet myminio/$${MINIO_BUCKET} 2>&1;
+      
+      /bin/mc admin user add myminio $${MINIO_ACCESS_KEY} $${MINIO_SECRET_KEY} --quiet 2>&1;  
+      
+      echo \"{
+              \\\"Version\\\": \\\"2012-10-17\\\",
+              \\\"Statement\\\": [
+                {
+                  \\\"Effect\\\": \\\"Allow\\\",
+                  \\\"Action\\\": [
+                    \\\"s3:GetBucketLocation\\\",
+                    \\\"s3:ListBucket\\\"
+                  ],
+                  \\\"Resource\\\": [
+                    \\\"arn:aws:s3:::$${MINIO_BUCKET}\\\"
+                  ]
+                },
+                {
+                  \\\"Effect\\\": \\\"Allow\\\",
+                  \\\"Action\\\": [
+                    \\\"s3:PutObject\\\",
+                    \\\"s3:GetObject\\\",
+                    \\\"s3:DeleteObject\\\"
+                  ],
+                  \\\"Resource\\\": [
+                    \\\"arn:aws:s3:::$${MINIO_BUCKET}/*\\\"
+                  ]
+                }
+              ]
+            }\" > /tmp/policy.json;
+      
+      cat /tmp/policy.json;
+      
+      /bin/mc admin policy create myminio user-policy /tmp/policy.json --quiet 2>&1;
+      
+      /bin/mc admin policy attach myminio user-policy --user $${MINIO_ACCESS_KEY} --quiet 2>&1;
+      
+      echo 'Setup complete!';
+      "
     networks:
       - temporal-network
 

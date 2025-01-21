@@ -16,11 +16,14 @@ services:
       - REDIS_URL=redis://temporal-redis:6379
       - OTLP__ENDPOINT=http://otel-collector:4317
       - STORAGE__MINIO_ENDPOINT=minio:9000
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     networks:
       - temporal-network
     depends_on:
-      - temporal
+      migration:
+        condition: service_completed_successfully
+      temporal:
+        condition: service_started
 
   transfer-worker:
     container_name: transfer-worker
@@ -33,12 +36,14 @@ services:
       - REDIS_URL=redis://temporal-redis:6379
       - OTLP__ENDPOINT=http://otel-collector:4317
       - STORAGE__MINIO_ENDPOINT=minio:9000
-    command: python -m app.workflows.transfer.worker
+    command: ["python", "-m", "app.workflows.transfer.worker"]
     networks:
       - temporal-network
     depends_on:
-      - temporal
-      - server
+      migration:
+        condition: service_completed_successfully
+      temporal:
+        condition: service_started
 
   translate-worker:
     container_name: translate-worker
@@ -54,12 +59,14 @@ services:
       - REDIS_URL=redis://temporal-redis:6379
       - OTLP__ENDPOINT=http://otel-collector:4317
       - STORAGE__MINIO_ENDPOINT=minio:9000
-    command: python -m app.workflows.translate.worker
+    command: [ "python", "-m", "app.workflows.translate.worker"]
     networks:
       - temporal-network
     depends_on:
-      - temporal
-      - server
+      migration:
+        condition: service_completed_successfully
+      temporal:
+        condition: service_started
 
   dsl-worker:
     container_name: dsl-worker
@@ -88,9 +95,30 @@ services:
       - VECTOR_STORE__OPENSEARCH_HOSTS=["opensearch:9200"]
       - VECTOR_STORE__OPENSEARCH_USER=${VECTOR_STORE__OPENSEARCH_USER:-admin}
       - VECTOR_STORE__OPENSEARCH_PASSWORD=${VECTOR_STORE__OPENSEARCH_PASSWORD}
-    command: python -m app.workflows.dsl.worker
+    command: ["python", "-m", "app.workflows.dsl.worker"]
     networks:
       - temporal-network
     depends_on:
-      - temporal
-      - server
+      migration:
+        condition: service_completed_successfully
+      temporal:
+        condition: service_started
+
+  migration:
+    container_name: migration
+    build: .
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE__URL=mysql+aiomysql://${DATABASE__USER}:${DATABASE__PASSWORD}@temporal-mysql:3306/${DATABASE__DATABASE}?charset=utf8mb4
+      - DATABASE__USER=${DATABASE__USER:-root}
+      - DATABASE__PASSWORD=${DATABASE__PASSWORD:-root}
+      - DATABASE__HOST=mysql
+      - DATABASE__PORT=3306
+      - DATABASE__DATABASE=${DATABASE__DATABASE:-mydb}
+    command: ["python", "-m", "scripts.migrate"]
+    networks:
+      - temporal-network
+    depends_on:
+      mysql:
+        condition: service_healthy
